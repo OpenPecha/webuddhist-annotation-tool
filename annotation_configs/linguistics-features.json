@@ -1,0 +1,34 @@
+{
+  "version": "1.0",
+  "title": "Linguistics Features",
+  "description": "Linguistic annotations including semantic roles and animacy. Word segmentation and POS tags are added prior to upload in format: token/POS_tag. These features can be manually added or corrected.",
+  "copyright": "© 2024 Buddhist AI Project",
+  "categories": [
+    {
+      "id": "semantic-roles",
+      "name": "Semantic roles",
+      "description": "Semantic roles that can be manually added or corrected on tokens",
+      "level": 0,
+      "mnemonic": "LING-SR",
+      "subcategories": [
+        {"id": "sr-agent", "name": "agent", "level": 1},
+        {"id": "sr-patient", "name": "patient", "level": 1},
+        {"id": "sr-theme", "name": "theme", "level": 1},
+        {"id": "sr-recipient", "name": "recipient", "level": 1},
+        {"id": "sr-location", "name": "location", "level": 1}
+      ]
+    },
+    {
+      "id": "animacy",
+      "name": "Animacy",
+      "description": "Animacy classification that can be manually added or corrected",
+      "level": 0,
+      "mnemonic": "LING-ANIM",
+      "subcategories": [
+        {"id": "animacy-human", "name": "human", "level": 1},
+        {"id": "animacy-animate", "name": "animate", "level": 1},
+        {"id": "animacy-inanimate", "name": "inanimate", "level": 1}
+      ]
+    }
+  ]
+}

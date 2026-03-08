@@ -1,0 +1,76 @@
+{
+  "version": "1.0",
+  "title": "Codicological/Philological Features",
+  "description": "Philological and codicological annotation features for Tibetan manuscript analysis. Important for reconstructing scribal practices. Includes script characteristics and manuscript elements.",
+  "copyright": "© 2024 Buddhist AI Project",
+  "categories": [
+    {
+      "id": "script-size",
+      "name": "Script size",
+      "description": "Size of the script in the manuscript",
+      "level": 0,
+      "mnemonic": "COD-SIZE",
+      "subcategories": [
+        {"id": "script-size-normal", "name": "normal", "level": 1},
+        {"id": "script-size-small", "name": "small", "level": 1},
+        {"id": "script-size-big", "name": "big", "level": 1}
+      ]
+    },
+    {
+      "id": "script-direction",
+      "name": "Script direction",
+      "description": "Direction of the script",
+      "level": 0,
+      "mnemonic": "COD-DIR",
+      "subcategories": [
+        {"id": "script-dir-horizontal", "name": "horizontal", "level": 1},
+        {"id": "script-dir-vertical", "name": "vertical", "level": 1},
+        {"id": "script-dir-circular", "name": "circular", "level": 1}
+      ]
+    },
+    {
+      "id": "script-style",
+      "name": "Script style",
+      "description": "Style of Tibetan script",
+      "level": 0,
+      "mnemonic": "COD-STYLE",
+      "subcategories": [
+        {"id": "script-style-ume", "name": "ume", "level": 1},
+        {"id": "script-style-uchen", "name": "uchen", "level": 1}
+      ]
+    },
+    {
+      "id": "script-colour",
+      "name": "Script colour",
+      "description": "Colour of the script",
+      "level": 0,
+      "mnemonic": "COD-COLOUR",
+      "subcategories": [
+        {"id": "script-colour-black", "name": "black", "level": 1},
+        {"id": "script-colour-red", "name": "red", "level": 1},
+        {"id": "script-colour-gold", "name": "gold", "level": 1}
+      ]
+    },
+    {
+      "id": "illustration",
+      "name": "Illustration",
+      "description": "Presence of illustrations in the manuscript",
+      "level": 0,
+      "mnemonic": "COD-ILL"
+    },
+    {
+      "id": "table",
+      "name": "Table",
+      "description": "Presence of tables in the text",
+      "level": 0,
+      "mnemonic": "COD-TAB"
+    },
+    {
+      "id": "symbols",
+      "name": "Symbols",
+      "description": "Special symbols or marks in the text",
+      "level": 0,
+      "mnemonic": "COD-SYM"
+    }
+  ]
+}
