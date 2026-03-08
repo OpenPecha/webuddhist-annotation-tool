@@ -453,37 +453,10 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
                 <IoClose className="w-3 h-3" />
               </button>
             </div>
-           
-            {selectedErrorCategory.breadcrumb && (
-              <div className="text-xs text-orange-700 mt-1">
-                {selectedErrorCategory.breadcrumb}
-              </div>
-            )}
-            <div className="text-xs font-mono text-orange-600 mt-1">
-              {selectedErrorCategory.mnemonic} • L{selectedErrorCategory.level}
-            </div>
           </div>
         )}
 
-        {/* Level Selection - for error-list mode */}
-        {/* {effectiveMode === "error-list" && selectedErrorCategory && (
-          <div className="mb-3">
-            <p className="text-xs text-gray-500 mb-2">
-              Importance level (optional):
-            </p>
-            <select
-              value={selectedLevel}
-              onChange={(e) => setSelectedLevel(e.target.value)}
-              disabled={isCreatingAnnotation}
-              className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-orange-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
-            >
-              <option value="">Select level...</option>
-              <option value="minor">🟢 Minor</option>
-              <option value="major">🟡 Major</option>
-              <option value="critical">🔴 Critical</option>
-            </select>
-          </div>
-        )} */}
+      
 
         {/* Loading/error states - only when loading list for selected type */}
         {loading && effectiveMode === "error-list" && selectedBubbleAnnotationType && (
@@ -550,7 +523,6 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
                     <div className="w-full overflow-hidden">
                       <div className="flex-1 min-w-0 space-y-1">
                         {isStructural ? (
-                          <>
                             <div className="flex items-center gap-2 min-w-0">
                               {(item as StructuralAnnotationType).icon && (
                                 <span className="text-sm flex-shrink-0">
@@ -561,32 +533,15 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
                                 {item.name}
                               </div>
                             </div>
-                            <div className="text-xs text-gray-500 leading-tight break-words">
-                              {item.description}
-                            </div>
-                          </>
+                          
                         ) : isAnnotationType ? (
                           <div className="text-sm font-medium truncate">
                             {(item as AnnotationType).name}
                           </div>
                         ) : (
-                          <>
                             <div className="text-sm font-medium truncate">
                               {item.name}
                             </div>
-                            {(item as CategoryWithBreadcrumb).breadcrumb && (
-                              <div className="text-xs text-gray-600 truncate">
-                                {(item as CategoryWithBreadcrumb).breadcrumb}
-                              </div>
-                            )}
-                            <div className="text-xs text-gray-500 leading-tight">
-                              {item.description}
-                            </div>
-                            <div className="text-xs font-mono opacity-70">
-                              {(item as CategoryWithBreadcrumb).mnemonic} • L
-                              {(item as CategoryWithBreadcrumb).level}
-                            </div>
-                          </>
                         )}
                       </div>
                     </div>
@@ -623,7 +578,6 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
                     <span>Add Annotation</span>
                     <span className="text-xs opacity-75">
                       ({selectedErrorCategory.mnemonic}
-                      {selectedLevel ? ` • ${selectedLevel}` : ""})
                     </span>
                   </div>
                 )}
