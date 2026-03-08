@@ -92,6 +92,14 @@ def get_annotation_lists_by_type_hierarchical(
     db: Session, current_user: User, type_id: str
 ):
     """Get annotation lists by type in hierarchical format."""
+    from crud.annotation_type import annotation_type_crud
+
+    at = annotation_type_crud.get(db=db, type_id=type_id)
+    if not at or at.is_hidden:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail=f"No annotation lists found with type '{type_id}'",
+        )
     items = annotation_list_crud.get_by_type_id(db=db, type_id=type_id)
     if not items:
         raise HTTPException(

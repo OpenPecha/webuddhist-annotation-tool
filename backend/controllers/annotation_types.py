@@ -96,13 +96,13 @@ def update_annotation_type(
 def delete_annotation_type(
     db: Session, current_user: User, type_id: str
 ) -> dict:
-    """Delete an annotation type (admin only)."""
+    """Soft-delete an annotation type (admin only). Hides from annotators/reviewers."""
     if current_user.role.value != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="Only admins can delete annotation types",
         )
-    success = annotation_type_crud.delete(db=db, type_id=type_id)
+    success = annotation_type_crud.soft_delete(db=db, type_id=type_id)
     if not success:
         raise HTTPException(
             status_code=status.HTTP_404_NOT_FOUND,

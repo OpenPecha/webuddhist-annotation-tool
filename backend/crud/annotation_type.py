@@ -28,9 +28,18 @@ class AnnotationTypeCRUD:
         """Get annotation type by name."""
         return db.query(AnnotationType).filter(AnnotationType.name == name).first()
     
-    def get_all(self, db: Session, skip: int = 0, limit: int = 100) -> List[AnnotationType]:
-        """Get all annotation types."""
-        return db.query(AnnotationType).offset(skip).limit(limit).all()
+    def get_all(
+        self,
+        db: Session,
+        skip: int = 0,
+        limit: int = 100,
+        include_hidden: bool = False,
+    ) -> List[AnnotationType]:
+        """Get all annotation types. By default excludes hidden (soft-deleted) types."""
+        query = db.query(AnnotationType)
+        if not include_hidden:
+            query = query.filter(AnnotationType.is_hidden == False)
+        return query.offset(skip).limit(limit).all()
     
     def update(self, db: Session, type_id: str, obj_in: AnnotationTypeUpdate) -> Optional[AnnotationType]:
         """Update an annotation type."""
@@ -47,13 +56,25 @@ class AnnotationTypeCRUD:
         return db_obj
     
     def delete(self, db: Session, type_id: str) -> bool:
-        """Delete an annotation type."""
+        """Hard delete an annotation type. Use soft_delete to avoid FK violations."""
         db_obj = self.get(db=db, type_id=type_id)
         if not db_obj:
             return False
-        
+
         db.delete(db_obj)
         db.commit()
+        return True
+
+    def soft_delete(self, db: Session, type_id: str) -> bool:
+        """Soft delete: mark annotation type as hidden. Type stays in DB for FK integrity."""
+        db_obj = self.get(db=db, type_id=type_id)
+        if not db_obj:
+            return False
+
+        db_obj.is_hidden = True
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
         return True
     
     def get_or_create(self, db: Session, name: str, uploader_id: Optional[str] = None) -> AnnotationType:

@@ -155,15 +155,15 @@ class AnnotationListCRUD:
         return False
     
     def delete_by_type(self, db: Session, type_id: str) -> int:
-        """Delete all annotation lists by type and the type itself."""
+        """Delete all annotation lists by type and soft-delete the annotation type."""
         items = db.query(AnnotationList).filter(AnnotationList.type_id == type_id).all()
         count = len(items)
         for item in items:
             db.delete(item)
-        
-        # Also delete the annotation type
-        annotation_type_crud.delete(db=db, type_id=type_id)
-        
+
+        # Soft-delete the annotation type (keeps row for FK from texts table)
+        annotation_type_crud.soft_delete(db=db, type_id=type_id)
+
         db.commit()
         return count
     
