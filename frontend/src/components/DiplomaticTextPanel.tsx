@@ -208,7 +208,7 @@ export function DiplomaticTextPanel({
                     onClick={handleSaveDiplomatic}
                     disabled={isSaving}
                   >
-                    {isSaving ? "Saving…" : "Save diplomatic"}
+                    {isSaving ? "Confirming..." : "Confirm diplomatic"}
                   </Button>
                 </div>
               </div>
