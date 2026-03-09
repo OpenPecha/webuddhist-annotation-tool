@@ -28,6 +28,7 @@ export interface EditorProps {
   readOnly?: boolean;
   isCreatingAnnotation?: boolean;
   isDeletingAnnotation?: boolean;
+  isUpdatingAnnotation?: boolean;
   highlightedAnnotationId?: string | null;
   hideScrollbar?: boolean;
 }

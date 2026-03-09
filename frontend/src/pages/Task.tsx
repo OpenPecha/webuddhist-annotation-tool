@@ -131,6 +131,7 @@ const Index = () => {
     handleUpdateHeaderSpan,
     isCreatingAnnotation,
     isDeletingAnnotation,
+    isUpdatingAnnotation,
   } = useAnnotationOperations(textId, text, currentUserId, annotationList);
 
   /**
@@ -347,6 +348,7 @@ const Index = () => {
               readOnly={isReadOnly}
               isCreatingAnnotation={isCreatingAnnotation}
               isDeletingAnnotation={isDeletingAnnotation}
+              isUpdatingAnnotation={isUpdatingAnnotation}
               highlightedAnnotationId={highlightedAnnotationId}
               textId={parsedTextId}
             />
@@ -397,7 +399,7 @@ const Index = () => {
       />
 
       {/* Floating annotation color settings */}
-      {/* <AnnotationColorSettings /> */}
+      <AnnotationColorSettings />
     </div>
   );
 };

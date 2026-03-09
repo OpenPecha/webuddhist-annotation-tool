@@ -37,6 +37,7 @@ interface TextAnnotatorProps {
   readOnly?: boolean;
   isCreatingAnnotation?: boolean;
   isDeletingAnnotation?: boolean;
+  isUpdatingAnnotation?: boolean;
   highlightedAnnotationId?: string | null;
   annotationMode?: NavigationMode;
   textId?: number;
@@ -63,6 +64,7 @@ export const TextAnnotator = forwardRef<TextAnnotatorRef, TextAnnotatorProps>(
       readOnly = true,
       isCreatingAnnotation = false,
       isDeletingAnnotation = false,
+      isUpdatingAnnotation = false,
       highlightedAnnotationId,
       annotationMode = "error-list",
       textId,
@@ -149,6 +151,7 @@ export const TextAnnotator = forwardRef<TextAnnotatorRef, TextAnnotatorProps>(
                   readOnly={readOnly}
                   isCreatingAnnotation={isCreatingAnnotation}
                   isDeletingAnnotation={isDeletingAnnotation}
+                  isUpdatingAnnotation={isUpdatingAnnotation}
                   highlightedAnnotationId={highlightedAnnotationId}
                   hideScrollbar={true}
                   annotationMode={annotationMode}
@@ -199,6 +202,7 @@ export const TextAnnotator = forwardRef<TextAnnotatorRef, TextAnnotatorProps>(
               readOnly={readOnly}
               isCreatingAnnotation={isCreatingAnnotation}
               isDeletingAnnotation={isDeletingAnnotation}
+              isUpdatingAnnotation={isUpdatingAnnotation}
               highlightedAnnotationId={highlightedAnnotationId}
               hideScrollbar={true}
               annotationMode={annotationMode}

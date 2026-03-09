@@ -14,6 +14,7 @@ import {
   useAnnotationColors,
   type AnnotationColorScheme,
 } from "@/hooks/use-annotation-colors";
+import { useAnnotationTypes } from "@/hooks";
 import { toast } from "sonner";
 
 interface ColorPickerProps {
@@ -167,9 +168,19 @@ const rgbaToHex = (rgba: string): string => {
   return rgba.startsWith("#") ? rgba : "#000000";
 };
 
+const DEFAULT_TYPE_COLOR = "#6b7280";
+
 export const AnnotationColorSettings: React.FC = () => {
-  const { colorScheme, updateColorScheme, resetToDefaults, isSaving } =
-    useAnnotationColors();
+  const {
+    colorScheme,
+    updateColorScheme,
+    resetToDefaults,
+    annotationTypeColors,
+    updateAnnotationTypeColor,
+    resetAnnotationTypeColors,
+    isSaving,
+  } = useAnnotationColors();
+  const { data: annotationTypes = [] } = useAnnotationTypes();
   const [isOpen, setIsOpen] = useState(false);
 
   const updateLevelColors = (
@@ -272,34 +283,73 @@ export const AnnotationColorSettings: React.FC = () => {
             </CardTitle>
           </CardHeader>
           <CardContent className="pt-0 space-y-3 max-h-96 overflow-y-auto">
-            <LevelSection
+            {/* <LevelSection
               level="critical"
               colors={colorScheme.critical}
               onUpdate={updateLevelColors}
               icon="🔴"
               title="Critical"
-            />
-            <LevelSection
-              level="major"
-              colors={colorScheme.major}
-              onUpdate={updateLevelColors}
-              icon="🟡"
-              title="Major"
-            />
-            <LevelSection
-              level="minor"
-              colors={colorScheme.minor}
-              onUpdate={updateLevelColors}
-              icon="🟢"
-              title="Minor"
-            />
-            <LevelSection
-              level="default"
-              colors={colorScheme.default}
-              onUpdate={updateLevelColors}
-              icon="⚪"
-              title="Default"
-            />
+            /> */}
+         
+
+            {/* Per-annotation-type colors */}
+            {annotationTypes.length > 0 && (
+              <div className="border-t border-gray-200 pt-3 space-y-2">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm font-medium">By annotation type</span>
+                  {Object.keys(annotationTypeColors).length > 0 && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-6 text-xs"
+                      onClick={() => {
+                        resetAnnotationTypeColors();
+                        toast.success("Annotation type colors cleared");
+                      }}
+                    >
+                      Clear all
+                    </Button>
+                  )}
+                </div>
+                <p className="text-xs text-gray-500">
+                  Overrides level colors for marks and labels of each type.
+                </p>
+                <div className="space-y-2">
+                  {annotationTypes.map((type) => (
+                    <div
+                      key={type.id}
+                      className="flex items-center justify-between gap-2 p-2 rounded bg-gray-50"
+                    >
+                      <span className="text-sm truncate flex-1 min-w-0">
+                        {type.name}
+                      </span>
+                      <div className="flex items-center gap-2 shrink-0">
+                        <div
+                          className="w-6 h-6 rounded border border-gray-300 cursor-pointer relative overflow-hidden"
+                          style={{
+                            backgroundColor:
+                              annotationTypeColors[type.name] ?? DEFAULT_TYPE_COLOR,
+                          }}
+                          title={`Color for ${type.name}`}
+                        >
+                          <input
+                            type="color"
+                            value={
+                              annotationTypeColors[type.name] ?? DEFAULT_TYPE_COLOR
+                            }
+                            onChange={(e) =>
+                              updateAnnotationTypeColor(type.name, e.target.value)
+                            }
+                            className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
+                            aria-label={`${type.name} color`}
+                          />
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </CardContent>
 
           {/* Footer with localStorage info */}

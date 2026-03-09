@@ -245,20 +245,11 @@ export const EditPopup: React.FC<EditPopupProps> = ({
     );
   }
 
-  const handleUpdate = () => {
-    if (selectedType) {
-      onUpdate(annotation.id, selectedType, annotationText, selectedLevel);
-    }
-  };
 
   const handleDelete = () => {
     onDelete();
   };
 
-  const hasChanges =
-    selectedType !== displayLabel ||
-    annotationText !== (annotation.name || "") ||
-    selectedLevel !== (annotation.level || "");
 
   const modalContent = (
     <div
@@ -281,9 +272,6 @@ export const EditPopup: React.FC<EditPopupProps> = ({
       </Button>
 
       <div className="mb-3 pr-8">
-        <h3 className="text-sm font-semibold text-gray-700 mb-2">
-          Edit Annotation
-        </h3>
 
         {/* Current annotation text - derive from content to match document (fixes XML/TEI encoding issues) */}
         <div className="mb-3 p-2 bg-gray-50 rounded border">
@@ -363,128 +351,7 @@ export const EditPopup: React.FC<EditPopupProps> = ({
             </div>
           </div>
         )}
-        {/* Annotation Type Selection */}
-        <div className="mb-3">
-          <p className="text-xs text-gray-500 mb-2">type:</p>
-          <div className="relative mb-2">
-            <IoSearch className="absolute left-2 top-1/2 transform -translate-y-1/2 w-3 h-3 text-gray-400 flex-shrink-0" />
-            <input
-              type="text"
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search types..."
-              autoComplete="off"
-              disabled={isUpdatingAnnotation}
-              className="w-full pl-7 pr-8 py-1.5 text-xs border border-gray-300 rounded focus:outline-none focus:ring-1 focus:ring-orange-400 focus:border-transparent min-w-0 disabled:opacity-50 disabled:bg-gray-100"
-            />
-            {searchQuery && (
-              <button
-                type="button"
-                onClick={() => setSearchQuery("")}
-                className="absolute right-2 top-1/2 transform -translate-y-1/2 text-gray-400 hover:text-gray-600"
-                aria-label="Clear search"
-              >
-                <IoClose className="w-3 h-3" />
-              </button>
-            )}
-          </div>
-          {searchQuery.trim() && (
-            <p className="text-xs text-gray-500 mb-1">
-              {filteredOptions.length} found
-            </p>
-          )}
-          <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-md bg-gray-50">
-            {filteredOptions.length > 0 ? (
-              filteredOptions.map((option: AnnotationOption) => (
-                <div
-                  key={option.id}
-                  onClick={() => setSelectedType(option.label)}
-                  className={`p-2 cursor-pointer border-b border-gray-100 last:border-b-0 hover:bg-orange-50 transition-colors ${
-                    selectedType === option.label || selectedType === option.id
-                      ? "bg-orange-100 border-orange-200"
-                      : ""
-                  } ${
-                    isUpdatingAnnotation ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
-                >
-                  <div className="flex items-center justify-between">
-                    <div className="flex items-center space-x-2">
-                      <span className="text-orange-500">⚠️</span>
-                      <div>
-                        <p className="text-sm font-medium text-gray-900">
-                          {option.label}
-                        </p>
-                        {option.mnemonic && (
-                          <p className="text-xs text-gray-500">
-                            ({option.mnemonic})
-                          </p>
-                        )}
-                      </div>
-                    </div>
-                    {(selectedType === option.label ||
-                      selectedType === option.id) && (
-                      <span className="text-orange-500 text-sm">✓</span>
-                    )}
-                  </div>
-                  {option.description && (
-                    <p className="text-xs text-gray-600 mt-1 pl-6">
-                      {option.description}
-                    </p>
-                  )}
-                </div>
-              ))
-            ) : (
-              <div className="p-3 text-center text-gray-500 text-sm">
-                {searchQuery.trim()
-                  ? "No types match your search."
-                  : "Loading types..."}
-              </div>
-            )}
-          </div>
-          {/* Add your own annotation */}
-          <div className="mt-2 flex gap-2">
-            <input
-              type="text"
-              placeholder="Can't find it? Add your own..."
-              value={customInput}
-              onChange={(e) => setCustomInput(e.target.value)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") {
-                  e.preventDefault()
-                  const trimmed = customInput.trim()
-                  if (trimmed && listTypeId) {
-                    addCustomAnnotation(listTypeId, trimmed)
-                    setSelectedType(trimmed)
-                    setCustomInput("")
-                  }
-                }
-              }}
-              disabled={isUpdatingAnnotation}
-              className="flex-1 px-3 py-2 text-xs border border-gray-300 rounded-md focus:outline-none focus:ring-1 focus:ring-orange-400 focus:border-transparent disabled:opacity-50 disabled:bg-gray-100"
-            />
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              disabled={
-                !customInput.trim() ||
-                !listTypeId ||
-                isUpdatingAnnotation
-              }
-              onClick={() => {
-                const trimmed = customInput.trim()
-                if (trimmed && listTypeId) {
-                  addCustomAnnotation(listTypeId, trimmed)
-                  setSelectedType(trimmed)
-                  setCustomInput("")
-                }
-              }}
-              className="shrink-0 px-2 py-2 text-xs"
-            >
-              <IoAdd className="w-4 h-4" />
-            </Button>
-          </div>
-        </div>
+      
 
         {/* Level Selection
         <div className="mb-3">
@@ -504,24 +371,7 @@ export const EditPopup: React.FC<EditPopupProps> = ({
           </select>
         </div> */}
 
-        {/* Annotation Text/Name */}
-        <div className="mb-4">
-          <input
-            type="text"
-            placeholder="Add a note (optional)..."
-            value={annotationText}
-            onChange={(e) => setAnnotationText(e.target.value)}
-            onKeyDown={(e) => {
-              if (e.key === "Escape") {
-                onCancel();
-              } else if (e.key === "Enter" && hasChanges && selectedType) {
-                handleUpdate();
-              }
-            }}
-            disabled={isUpdatingAnnotation}
-            className="w-full px-3 py-2 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent disabled:opacity-50 disabled:cursor-not-allowed disabled:bg-gray-100"
-          />
-        </div>
+     
 
         {/* Action Buttons */}
         <div className="flex gap-2 justify-between">
@@ -538,28 +388,7 @@ export const EditPopup: React.FC<EditPopupProps> = ({
             Delete
           </Button>
 
-          <div className="flex gap-2">
-            <Button
-              onClick={onCancel}
-              disabled={isUpdatingAnnotation}
-              variant="outline"
-              size="sm"
-              className="px-3 py-2 text-sm"
-            >
-              Cancel
-            </Button>
-            <Button
-              onClick={handleUpdate}
-              disabled={!hasChanges || !selectedType || isUpdatingAnnotation}
-              size="sm"
-              className="px-3 py-2 text-sm bg-blue-600 hover:bg-blue-700 text-white"
-            >
-              {isUpdatingAnnotation ? (
-                <AiOutlineLoading3Quarters className="w-3 h-3 animate-spin mr-1" />
-              ) : null}
-              Update
-            </Button>
-          </div>
+       
         </div>
       </div>
     </div>

@@ -6,6 +6,7 @@ import {
   getStructuralAnnotationType,
 } from "@/config/structural-annotations";
 import { getAnnotationDisplayLabel } from "@/utils/annotationConverter";
+import { sanitizeAnnotationTypeForClass } from "@/utils/annotationColorUtils";
 import type { Annotation } from "@/pages/Task";
 
 // Widget class for annotation labels
@@ -36,16 +37,18 @@ class AnnotationLabelWidget extends WidgetType {
     const isStructural = isStructuralAnnotationType(this.annotation.type);
 
     if (isStructural) {
-      // Use structural-specific class
       levelClass = `annotation-label-structural-${this.annotation.type}`;
     } else {
-      // Use level-based class for error annotations
       levelClass = this.annotation.level
         ? `annotation-label-${this.annotation.level}`
         : "annotation-label-default";
     }
 
-    label.className = `annotation-label ${levelClass} ${
+    const typeClass = isStructural
+      ? ""
+      : ` annotation-label-type-${sanitizeAnnotationTypeForClass(this.annotation.type)}`;
+
+    label.className = `annotation-label ${levelClass}${typeClass} ${
       this.isOptimistic ? "annotation-label-optimistic" : ""
     } ${this.annotation.is_agreed ? "annotation-label-agreed" : ""} ${
       this.isHighlighted ? "annotation-label-highlighted" : ""
@@ -166,17 +169,19 @@ export const annotationField = StateField.define<AnnotationFieldState>({
         let levelClass: string;
 
         if (isStructural) {
-          // Use structural-specific class for text highlighting
           levelClass = `annotation-structural-${annotation.type}`;
         } else {
-          // Use level-based class for error annotations
           levelClass = annotation.level
             ? `annotation-${annotation.level}`
             : "annotation-default";
         }
 
+        const typeClass = isStructural
+          ? ""
+          : ` annotation-type-${sanitizeAnnotationTypeForClass(annotation.type)}`;
+
         const markDecoration = Decoration.mark({
-          class: `${levelClass} ${
+          class: `${levelClass}${typeClass} ${
             isOptimistic ? "annotation-optimistic" : ""
           } ${annotation.is_agreed ? "annotation-agreed" : ""} ${
             isHighlighted ? "annotation-highlighted" : ""

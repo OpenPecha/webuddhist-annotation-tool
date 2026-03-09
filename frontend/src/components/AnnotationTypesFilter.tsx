@@ -97,29 +97,29 @@ export const AnnotationTypesFilter = ({
   };
 
   const keysForType = (opts: FilterOption[]) => opts.map((o) => o.key);
-  const isOnlyTypeSelected = (opts: FilterOption[]) => {
+  /** True when all keys of this type are in the selection (allows other types to be selected too) */
+  const isTypeFullySelected = (opts: FilterOption[]) => {
     const keys = keysForType(opts);
     if (keys.length === 0) return false;
-    return keys.every((k) => selectedAnnotationTypes.has(k)) && selectedAnnotationTypes.size === keys.length;
+    return keys.every((k) => selectedAnnotationTypes.has(k));
   };
+  /** Toggle whole type: add all keys of this type to selection, or remove all (multi-select friendly) */
   const handleTypeCheckboxChange = (opts: FilterOption[]) => {
     const keys = keysForType(opts);
-    const onlyThisSelected = isOnlyTypeSelected(opts);
-    if (onlyThisSelected) {
-      const next = new Set(selectedAnnotationTypes);
+    if (keys.length === 0) return;
+    const fullySelected = isTypeFullySelected(opts);
+    const next = new Set(selectedAnnotationTypes);
+    if (fullySelected) {
       keys.forEach((k) => next.delete(k));
-      if (onSetSelectedAnnotationTypes) {
-        onSetSelectedAnnotationTypes(next);
-      } else {
-        onDeselectAllAnnotationTypes();
-      }
-    } else if (keys.length > 0) {
-      if (onSetSelectedAnnotationTypes && keys.length > 0) {
-        onSetSelectedAnnotationTypes(new Set(keys));
-      } else {
-        onSelectAllAnnotationTypes(keys);
-      }
+    } else {
+      keys.forEach((k) => next.add(k));
     }
+    if (onSetSelectedAnnotationTypes) {
+      onSetSelectedAnnotationTypes(next);
+      return;
+    }
+    onDeselectAllAnnotationTypes();
+    if (next.size > 0) onSelectAllAnnotationTypes(Array.from(next));
   };
 
   return (
@@ -174,7 +174,7 @@ export const AnnotationTypesFilter = ({
               <div className="max-h-60 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 {groupedByType.map(([typeName, opts]) => {
                   const isExpanded = expandedTypes.has(typeName);
-                  const onlyThisSelected = isOnlyTypeSelected(opts);
+                  const typeFullySelected = isTypeFullySelected(opts);
                   return (
                     <div key={typeName} className="border border-gray-200 rounded overflow-hidden">
                       <div className="flex items-center gap-1 bg-gray-50 border-b border-gray-200 min-h-8">
@@ -194,10 +194,10 @@ export const AnnotationTypesFilter = ({
                         <input
                           type="checkbox"
                           id={`filter-type-${typeName}`}
-                          checked={onlyThisSelected}
+                          checked={typeFullySelected}
                           onChange={() => handleTypeCheckboxChange(opts)}
                           className="w-3.5 h-3.5 text-orange-500 border-gray-300 rounded focus:ring-orange-400 focus:ring-1 cursor-pointer flex-shrink-0"
-                          title={onlyThisSelected ? "Show all types" : "Show only this annotation type"}
+                          title={typeFullySelected ? "Hide this annotation type" : "Show this annotation type"}
                         />
                         <label
                           htmlFor={`filter-type-${typeName}`}

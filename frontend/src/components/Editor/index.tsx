@@ -37,6 +37,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
       readOnly = true,
       isCreatingAnnotation = false,
       isDeletingAnnotation = false,
+      isUpdatingAnnotation = false,
       highlightedAnnotationId,
       hideScrollbar = false,
     },
@@ -960,7 +961,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
           position={editPopupPosition}
           annotation={annotationToEdit}
           content={text}
-          isUpdatingAnnotation={isDeletingAnnotation}
+          isUpdatingAnnotation={isUpdatingAnnotation}
           onUpdate={handleUpdateAnnotation}
           onDelete={handleDeleteFromEdit}
           onCancel={resetEditPopup}

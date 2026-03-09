@@ -193,7 +193,8 @@ export const useAnnotationOperations = (
           });
         }
 
-        autoCheckAnnotationType(data.annotation_type);
+        const filterKey = getDisplayLabelForFilter(data);
+        if (filterKey) autoCheckAnnotationType(filterKey);
 
         toast({
           title: TOAST_MESSAGES.ANNOTATION_CREATED,
@@ -217,8 +218,8 @@ export const useAnnotationOperations = (
   }, [textId, validateAnnotationType, currentUserId, toast, createAnnotationMutation, autoCheckAnnotationType, queryClient]);
 
   /**
-   * "Edit" = remove the annotation on that span and create a new one with the new type/name/level.
-   * Does not update the existing annotation record (no PUT); deletes then creates.
+   * Update annotation in place via PUT (label, name, level).
+   * Keeps the same record; no delete+create.
    */
   const updateAnnotation = useCallback(async (
     annotationId: string,
@@ -248,19 +249,11 @@ export const useAnnotationOperations = (
       return;
     }
 
-    if (!annotation) {
+    // Skip type validation for update: EditPopup already restricts to valid options for this annotation's list.
+    if (!newType?.trim()) {
       toast({
         title: TOAST_MESSAGES.INVALID_TYPE,
-        description: "Annotation not found.",
-      });
-      return;
-    }
-
-    const isValidType = await validateAnnotationType(newType);
-    if (!isValidType) {
-      toast({
-        title: TOAST_MESSAGES.INVALID_TYPE,
-        description: "Invalid annotation type.",
+        description: "Please select a type.",
       });
       return;
     }
@@ -270,81 +263,59 @@ export const useAnnotationOperations = (
       ? (newLevel as "minor" | "major" | "critical")
       : undefined;
 
-    const createAnnotationType = annotation.annotation_type;
-    const createLabel = newType;
-
-    const selectedText = {
-      text: annotation.selected_text ?? text.slice(annotation.start_position, annotation.end_position),
-      start: annotation.start_position,
-      end: annotation.end_position,
+    const updateData = {
+      label: newType,
+      name: newText,
+      ...(levelValue !== undefined && { level: levelValue }),
     };
 
     const previous = current ? { ...current } : undefined;
-    if (current) {
+    if (current && annotation) {
       queryClient.setQueryData<TextWithAnnotations>(cacheKey, {
         ...current,
-        annotations: current.annotations.filter((ann) => ann.id !== annotationIdNumber),
+        annotations: current.annotations.map((ann) =>
+          ann.id === annotationIdNumber
+            ? { ...ann, label: newType, name: newText, level: levelValue }
+            : ann
+        ),
       });
     }
 
-    deleteAnnotationMutation.mutate(annotationIdNumber, {
-      onSuccess: () => {
-        const createPayload: AnnotationCreate = {
-          text_id: textIdNumber,
-          annotation_type: createAnnotationType,
-          start_position: selectedText.start,
-          end_position: selectedText.end,
-          selected_text: selectedText.text,
-          confidence: 100,
-          label: createLabel,
-          name: newText,
-          level: levelValue,
-          meta: {},
-        };
-
-        createAnnotationMutation.mutate(createPayload, {
-          onSuccess: (data) => {
-            const currentAfter = queryClient.getQueryData<TextWithAnnotations>(cacheKey);
-            if (currentAfter) {
-              queryClient.setQueryData<TextWithAnnotations>(cacheKey, {
-                ...currentAfter,
-                annotations: [...currentAfter.annotations, data],
-              });
-            }
-            // Select the new annotation's type in the filter so the edited annotation is visible
-            const displayLabel = getDisplayLabelForFilter(data);
-            if (displayLabel) autoCheckAnnotationType(displayLabel);
-            toast({
-              title: TOAST_MESSAGES.ANNOTATION_UPDATED,
-              description: `Annotation replaced with ${data.annotation_type} successfully`,
+    updateAnnotationMutation.mutate(
+      { id: annotationIdNumber, data: updateData },
+      {
+        onSuccess: (data) => {
+          const currentAfter = queryClient.getQueryData<TextWithAnnotations>(cacheKey);
+          if (currentAfter) {
+            queryClient.setQueryData<TextWithAnnotations>(cacheKey, {
+              ...currentAfter,
+              annotations: currentAfter.annotations.map((ann) =>
+                ann.id === annotationIdNumber ? data : ann
+              ),
             });
-          },
-          onError: (error) => {
-            toast({
-              title: TOAST_MESSAGES.ANNOTATION_UPDATE_FAILED,
-              description: error instanceof Error ? error.message : "Old annotation removed but failed to create new one",
-            });
-            queryClient.invalidateQueries({ queryKey: cacheKey });
-          },
-          onSettled: () => {
-            queryClient.invalidateQueries({ queryKey: cacheKey });
-          },
-        });
-      },
-      onError: (error) => {
-        if (previous) {
-          queryClient.setQueryData<TextWithAnnotations>(cacheKey, previous);
-        }
-        toast({
-          title: TOAST_MESSAGES.ANNOTATION_UPDATE_FAILED,
-          description: error instanceof Error ? error.message : "Failed to update annotation",
-        });
-      },
-      onSettled: () => {
-        queryClient.invalidateQueries({ queryKey: cacheKey });
-      },
-    });
-  }, [textId, text, toast, validateAnnotationType, deleteAnnotationMutation, createAnnotationMutation, autoCheckAnnotationType, queryClient]);
+          }
+          const displayLabel = getDisplayLabelForFilter(data);
+          if (displayLabel) autoCheckAnnotationType(displayLabel);
+          toast({
+            title: TOAST_MESSAGES.ANNOTATION_UPDATED,
+            description: "Annotation updated successfully",
+          });
+        },
+        onError: (error) => {
+          if (previous) {
+            queryClient.setQueryData<TextWithAnnotations>(cacheKey, previous);
+          }
+          toast({
+            title: TOAST_MESSAGES.ANNOTATION_UPDATE_FAILED,
+            description: error instanceof Error ? error.message : "Failed to update annotation",
+          });
+        },
+        onSettled: () => {
+          queryClient.invalidateQueries({ queryKey: cacheKey });
+        },
+      }
+    );
+  }, [textId, toast, updateAnnotationMutation, autoCheckAnnotationType, queryClient]);
 
   /**
    * Removes an annotation

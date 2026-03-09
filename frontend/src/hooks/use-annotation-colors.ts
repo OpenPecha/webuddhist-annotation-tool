@@ -56,31 +56,49 @@ const DEFAULT_COLOR_SCHEME: AnnotationColorScheme = {
 };
 
 const STORAGE_KEY = "annotation-color-scheme";
+const TYPE_COLORS_STORAGE_KEY = "annotation-type-colors";
 const DEBOUNCE_DELAY = 1000; // 1 second
+
+import { sanitizeAnnotationTypeForClass } from "@/utils/annotationColorUtils";
+
+export { sanitizeAnnotationTypeForClass };
+
+/** Convert hex to rgba with given alpha */
+function hexToRgba(hex: string, alpha: number): string {
+  const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
+  if (!result) return hex;
+  const r = parseInt(result[1], 16);
+  const g = parseInt(result[2], 16);
+  const b = parseInt(result[3], 16);
+  return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+}
 
 export const useAnnotationColors = () => {
   const [colorScheme, setColorScheme] =
     useState<AnnotationColorScheme>(DEFAULT_COLOR_SCHEME);
   const [pendingColorScheme, setPendingColorScheme] =
     useState<AnnotationColorScheme | null>(null);
+  const [annotationTypeColors, setAnnotationTypeColors] = useState<
+    Record<string, string>
+  >({});
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
 
-  // Apply colors to CSS dynamically
-  const applyColorsToCSS = useCallback((scheme: AnnotationColorScheme) => {
-    // Remove existing custom style if it exists
-    const existingStyle = document.getElementById("annotation-color-overrides");
-    if (existingStyle) {
-      existingStyle.remove();
-    }
+  // Apply colors to CSS dynamically (level-based + per-annotation-type)
+  const applyColorsToCSS = useCallback(
+    (scheme: AnnotationColorScheme, typeColors: Record<string, string> = {}) => {
+      // Remove existing custom style if it exists
+      const existingStyle = document.getElementById("annotation-color-overrides");
+      if (existingStyle) {
+        existingStyle.remove();
+      }
 
-    // Create new style element
-    const style = document.createElement("style");
-    style.id = "annotation-color-overrides";
+      const style = document.createElement("style");
+      style.id = "annotation-color-overrides";
 
-    const css = `
-      /* Dynamic annotation colors */
+      const levelCss = `
+      /* Dynamic annotation colors (by level) */
       .annotation-critical {
         background-color: ${scheme.critical.background} !important;
         border-bottom-color: ${scheme.critical.border} !important;
@@ -101,7 +119,7 @@ export const useAnnotationColors = () => {
         border-bottom-color: ${scheme.default.border} !important;
       }
       
-      /* Dynamic annotation label colors */
+      /* Dynamic annotation label colors (by level) */
       .annotation-label-critical {
         background-color: ${scheme.critical.label} !important;
         border-color: ${scheme.critical.labelBorder} !important;
@@ -123,30 +141,49 @@ export const useAnnotationColors = () => {
       }
     `;
 
-    style.textContent = css;
-    document.head.appendChild(style);
-  }, []);
+      const typeCss = Object.entries(typeColors)
+        .map(([typeName, hex]) => {
+          const cls = sanitizeAnnotationTypeForClass(typeName);
+          if (!cls || cls === "default") return "";
+          const background = hexToRgba(hex, 0.25);
+          return `
+      .annotation-type-${cls} {
+        background-color: ${background} !important;
+        border-bottom-color: ${hex} !important;
+      }
+      .annotation-label-type-${cls} {
+        background-color: ${hex} !important;
+        border-color: ${hex} !important;
+        color: #fff !important;
+      }
+      `;
+        })
+        .join("");
 
-  // Debounced update function
+      style.textContent = levelCss + "\n/* Per-annotation-type colors */\n" + typeCss;
+      document.head.appendChild(style);
+    },
+    []
+  );
+
+  const typeColorsRef = useRef<Record<string, string>>({});
+  typeColorsRef.current = annotationTypeColors;
+
+  // Debounced update function (level scheme only)
   const debouncedUpdate = useCallback(
     (scheme: AnnotationColorScheme) => {
-      // Clear existing timeout
       if (saveTimeoutRef.current) {
         clearTimeout(saveTimeoutRef.current);
       }
 
-      // Set pending state and saving indicator
       setPendingColorScheme(scheme);
       setIsSaving(true);
 
-      // Set new timeout for both UI update and localStorage save
       saveTimeoutRef.current = setTimeout(() => {
         try {
-          // Apply colors to UI
           setColorScheme(scheme);
-          applyColorsToCSS(scheme);
+          applyColorsToCSS(scheme, typeColorsRef.current);
 
-          // Save to localStorage
           localStorage.setItem(STORAGE_KEY, JSON.stringify(scheme));
         } catch (error) {
           console.error(
@@ -163,31 +200,36 @@ export const useAnnotationColors = () => {
     [applyColorsToCSS]
   );
 
-  // Load colors from localStorage on mount
+  // Load level scheme and type colors from localStorage on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
+      let scheme = DEFAULT_COLOR_SCHEME;
       if (saved) {
-        const parsedScheme = JSON.parse(saved);
-        // Merge with defaults to ensure all properties exist
-        const mergedScheme = {
-          ...DEFAULT_COLOR_SCHEME,
-          ...parsedScheme,
-        };
-        setColorScheme(mergedScheme);
-        // Apply colors immediately and synchronously
-        applyColorsToCSS(mergedScheme);
-      } else {
-        // Apply default colors immediately
-        applyColorsToCSS(DEFAULT_COLOR_SCHEME);
+        const parsed = JSON.parse(saved);
+        scheme = { ...DEFAULT_COLOR_SCHEME, ...parsed };
+        setColorScheme(scheme);
       }
+
+      const savedTypeColors = localStorage.getItem(TYPE_COLORS_STORAGE_KEY);
+      let typeColors: Record<string, string> = {};
+      if (savedTypeColors) {
+        try {
+          typeColors = JSON.parse(savedTypeColors);
+          setAnnotationTypeColors(typeColors);
+        } catch {
+          // ignore invalid type colors
+        }
+      }
+      typeColorsRef.current = typeColors;
+
+      applyColorsToCSS(scheme, typeColors);
     } catch (error) {
       console.error(
         "Failed to load annotation colors from localStorage:",
         error
       );
-      // Apply default colors as fallback
-      applyColorsToCSS(DEFAULT_COLOR_SCHEME);
+      applyColorsToCSS(DEFAULT_COLOR_SCHEME, {});
     } finally {
       setIsLoaded(true);
     }
@@ -202,22 +244,17 @@ export const useAnnotationColors = () => {
     [debouncedUpdate]
   );
 
-  // Reset to default colors
+  // Reset to default colors (level scheme only; type colors kept)
   const resetToDefaults = useCallback(() => {
-    // Clear any pending saves
     if (saveTimeoutRef.current) {
       clearTimeout(saveTimeoutRef.current);
       saveTimeoutRef.current = null;
     }
 
-    // Clear pending state
     setPendingColorScheme(null);
-
-    // Update immediately (no debounce for reset)
     setColorScheme(DEFAULT_COLOR_SCHEME);
-    applyColorsToCSS(DEFAULT_COLOR_SCHEME);
+    applyColorsToCSS(DEFAULT_COLOR_SCHEME, typeColorsRef.current);
 
-    // Save immediately
     try {
       localStorage.setItem(STORAGE_KEY, JSON.stringify(DEFAULT_COLOR_SCHEME));
       setIsSaving(false);
@@ -225,6 +262,40 @@ export const useAnnotationColors = () => {
       console.error("Failed to save default colors to localStorage:", error);
     }
   }, [applyColorsToCSS]);
+
+  // Update color for one annotation type (e.g. "pos", "error_typology")
+  const updateAnnotationTypeColor = useCallback(
+    (typeName: string, color: string) => {
+      const next = { ...annotationTypeColors, [typeName]: color };
+      setAnnotationTypeColors(next);
+      typeColorsRef.current = next;
+      applyColorsToCSS(colorScheme, next);
+      try {
+        localStorage.setItem(TYPE_COLORS_STORAGE_KEY, JSON.stringify(next));
+      } catch (error) {
+        console.error(
+          "Failed to save annotation type colors to localStorage:",
+          error
+        );
+      }
+    },
+    [annotationTypeColors, colorScheme, applyColorsToCSS]
+  );
+
+  // Reset per-annotation-type colors only
+  const resetAnnotationTypeColors = useCallback(() => {
+    setAnnotationTypeColors({});
+    typeColorsRef.current = {};
+    applyColorsToCSS(colorScheme, {});
+    try {
+      localStorage.removeItem(TYPE_COLORS_STORAGE_KEY);
+    } catch (error) {
+      console.error(
+        "Failed to clear annotation type colors from localStorage:",
+        error
+      );
+    }
+  }, [colorScheme, applyColorsToCSS]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -242,6 +313,9 @@ export const useAnnotationColors = () => {
     colorScheme: displayColorScheme,
     updateColorScheme,
     resetToDefaults,
+    annotationTypeColors,
+    updateAnnotationTypeColor,
+    resetAnnotationTypeColors,
     isLoaded,
     isSaving,
   };
