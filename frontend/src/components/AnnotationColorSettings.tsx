@@ -176,6 +176,7 @@ export const AnnotationColorSettings: React.FC = () => {
     updateColorScheme,
     resetToDefaults,
     annotationTypeColors,
+    hasTypeColorOverrides,
     updateAnnotationTypeColor,
     resetAnnotationTypeColors,
     isSaving,
@@ -201,9 +202,10 @@ export const AnnotationColorSettings: React.FC = () => {
 
   const handleReset = () => {
     resetToDefaults();
+    resetAnnotationTypeColors();
     toast.success("Colors reset to defaults", {
       description:
-        "All annotation colors have been restored to their original values",
+        "Level and annotation type colors have been restored to database values",
       duration: 3000,
     });
   };
@@ -297,7 +299,7 @@ export const AnnotationColorSettings: React.FC = () => {
               <div className="border-t border-gray-200 pt-3 space-y-2">
                 <div className="flex items-center justify-between">
                   <span className="text-sm font-medium">By annotation type</span>
-                  {Object.keys(annotationTypeColors).length > 0 && (
+                  {hasTypeColorOverrides && (
                     <Button
                       variant="ghost"
                       size="sm"

@@ -1,4 +1,5 @@
-import { useState, useEffect, useCallback, useRef } from "react";
+import { useState, useEffect, useCallback, useRef, useMemo } from "react";
+import { useAnnotationTypes } from "./useAnnotationTypes";
 
 export interface AnnotationColorScheme {
   critical: {
@@ -58,6 +59,7 @@ const DEFAULT_COLOR_SCHEME: AnnotationColorScheme = {
 const STORAGE_KEY = "annotation-color-scheme";
 const TYPE_COLORS_STORAGE_KEY = "annotation-type-colors";
 const DEBOUNCE_DELAY = 1000; // 1 second
+const DEFAULT_TYPE_COLOR = "#6b7280";
 
 import { sanitizeAnnotationTypeForClass } from "@/utils/annotationColorUtils";
 
@@ -74,16 +76,30 @@ function hexToRgba(hex: string, alpha: number): string {
 }
 
 export const useAnnotationColors = () => {
+  const { data: annotationTypes = [] } = useAnnotationTypes();
   const [colorScheme, setColorScheme] =
     useState<AnnotationColorScheme>(DEFAULT_COLOR_SCHEME);
   const [pendingColorScheme, setPendingColorScheme] =
     useState<AnnotationColorScheme | null>(null);
-  const [annotationTypeColors, setAnnotationTypeColors] = useState<
+  /** User overrides from annotation style editor (persisted in localStorage). */
+  const [typeColorOverrides, setTypeColorOverrides] = useState<
     Record<string, string>
   >({});
   const [isLoaded, setIsLoaded] = useState(false);
   const [isSaving, setIsSaving] = useState(false);
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
+  /** Effective colors: localStorage override ?? DB (model) color ?? default. */
+  const annotationTypeColors = useMemo(() => {
+    const effective: Record<string, string> = {};
+    for (const type of annotationTypes) {
+      effective[type.name] =
+        typeColorOverrides[type.name] ??
+        (type.color && type.color.trim() !== "" ? type.color : null) ??
+        DEFAULT_TYPE_COLOR;
+    }
+    return effective;
+  }, [annotationTypes, typeColorOverrides]);
 
   // Apply colors to CSS dynamically (level-based + per-annotation-type)
   const applyColorsToCSS = useCallback(
@@ -169,6 +185,34 @@ export const useAnnotationColors = () => {
   const typeColorsRef = useRef<Record<string, string>>({});
   typeColorsRef.current = annotationTypeColors;
 
+  /** Build effective type colors: overrides ?? DB color ?? default */
+  const buildEffectiveTypeColors = useCallback(
+    (overrides: Record<string, string>) => {
+      const effective: Record<string, string> = {};
+      for (const type of annotationTypes) {
+        effective[type.name] =
+          overrides[type.name] ??
+          (type.color && type.color.trim() !== "" ? type.color : null) ??
+          DEFAULT_TYPE_COLOR;
+      }
+      return effective;
+    },
+    [annotationTypes]
+  );
+
+  // Apply effective colors to CSS whenever scheme, types, or overrides change
+  useEffect(() => {
+    const effective = buildEffectiveTypeColors(typeColorOverrides);
+    typeColorsRef.current = effective;
+    applyColorsToCSS(colorScheme, effective);
+  }, [
+    colorScheme,
+    typeColorOverrides,
+    annotationTypes,
+    buildEffectiveTypeColors,
+    applyColorsToCSS,
+  ]);
+
   // Debounced update function (level scheme only)
   const debouncedUpdate = useCallback(
     (scheme: AnnotationColorScheme) => {
@@ -200,7 +244,7 @@ export const useAnnotationColors = () => {
     [applyColorsToCSS]
   );
 
-  // Load level scheme and type colors from localStorage on mount
+  // Load level scheme and type color overrides from localStorage on mount
   useEffect(() => {
     try {
       const saved = localStorage.getItem(STORAGE_KEY);
@@ -212,28 +256,24 @@ export const useAnnotationColors = () => {
       }
 
       const savedTypeColors = localStorage.getItem(TYPE_COLORS_STORAGE_KEY);
-      let typeColors: Record<string, string> = {};
+      let overrides: Record<string, string> = {};
       if (savedTypeColors) {
         try {
-          typeColors = JSON.parse(savedTypeColors);
-          setAnnotationTypeColors(typeColors);
+          overrides = JSON.parse(savedTypeColors);
+          setTypeColorOverrides(overrides);
         } catch {
           // ignore invalid type colors
         }
       }
-      typeColorsRef.current = typeColors;
-
-      applyColorsToCSS(scheme, typeColors);
     } catch (error) {
       console.error(
         "Failed to load annotation colors from localStorage:",
         error
       );
-      applyColorsToCSS(DEFAULT_COLOR_SCHEME, {});
     } finally {
       setIsLoaded(true);
     }
-  }, [applyColorsToCSS]);
+  }, []);
 
   // Update color scheme with proper debouncing
   const updateColorScheme = useCallback(
@@ -263,15 +303,19 @@ export const useAnnotationColors = () => {
     }
   }, [applyColorsToCSS]);
 
-  // Update color for one annotation type (e.g. "pos", "error_typology")
+  // Update color for one annotation type (user override; persisted in localStorage)
   const updateAnnotationTypeColor = useCallback(
     (typeName: string, color: string) => {
-      const next = { ...annotationTypeColors, [typeName]: color };
-      setAnnotationTypeColors(next);
-      typeColorsRef.current = next;
-      applyColorsToCSS(colorScheme, next);
+      const nextOverrides = { ...typeColorOverrides, [typeName]: color };
+      setTypeColorOverrides(nextOverrides);
+      const nextEffective = buildEffectiveTypeColors(nextOverrides);
+      typeColorsRef.current = nextEffective;
+      applyColorsToCSS(colorScheme, nextEffective);
       try {
-        localStorage.setItem(TYPE_COLORS_STORAGE_KEY, JSON.stringify(next));
+        localStorage.setItem(
+          TYPE_COLORS_STORAGE_KEY,
+          JSON.stringify(nextOverrides)
+        );
       } catch (error) {
         console.error(
           "Failed to save annotation type colors to localStorage:",
@@ -279,14 +323,20 @@ export const useAnnotationColors = () => {
         );
       }
     },
-    [annotationTypeColors, colorScheme, applyColorsToCSS]
+    [
+      typeColorOverrides,
+      colorScheme,
+      buildEffectiveTypeColors,
+      applyColorsToCSS,
+    ]
   );
 
-  // Reset per-annotation-type colors only
+  // Reset per-annotation-type colors: clear overrides so DB (model) colors are used
   const resetAnnotationTypeColors = useCallback(() => {
-    setAnnotationTypeColors({});
-    typeColorsRef.current = {};
-    applyColorsToCSS(colorScheme, {});
+    setTypeColorOverrides({});
+    const effective = buildEffectiveTypeColors({});
+    typeColorsRef.current = effective;
+    applyColorsToCSS(colorScheme, effective);
     try {
       localStorage.removeItem(TYPE_COLORS_STORAGE_KEY);
     } catch (error) {
@@ -295,7 +345,7 @@ export const useAnnotationColors = () => {
         error
       );
     }
-  }, [colorScheme, applyColorsToCSS]);
+  }, [colorScheme, buildEffectiveTypeColors, applyColorsToCSS]);
 
   // Cleanup timeout on unmount
   useEffect(() => {
@@ -314,6 +364,7 @@ export const useAnnotationColors = () => {
     updateColorScheme,
     resetToDefaults,
     annotationTypeColors,
+    hasTypeColorOverrides: Object.keys(typeColorOverrides).length > 0,
     updateAnnotationTypeColor,
     resetAnnotationTypeColors,
     isLoaded,

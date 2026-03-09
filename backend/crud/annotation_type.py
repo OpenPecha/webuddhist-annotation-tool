@@ -13,7 +13,8 @@ class AnnotationTypeCRUD:
         db_obj = AnnotationType(
             id=str(uuid.uuid4()),
             name=obj_in.name,
-            uploader_id=obj_in.uploader_id
+            uploader_id=obj_in.uploader_id,
+            color=obj_in.color,
         )
         db.add(db_obj)
         db.commit()

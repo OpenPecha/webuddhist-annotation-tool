@@ -14,7 +14,7 @@ class AnnotationType(Base):
     uploader_id = Column(String, ForeignKey("users.auth0_user_id"), nullable=True, index=True)
     created_at = Column(DateTime(timezone=True), server_default=func.now())
     updated_at = Column(DateTime(timezone=True), onupdate=func.now())
-
+    color = Column(String, nullable=True)
     # Relationships
     annotation_lists = relationship("AnnotationList", back_populates="annotation_type", cascade="all, delete-orphan")
 

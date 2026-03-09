@@ -4,6 +4,7 @@ import { apiClient } from "./utils";
 export interface AnnotationType {
   id: string;
   name: string;
+  color?: string | null;
   description?: string;
   meta?: Record<string, any>;
   created_at: string;
