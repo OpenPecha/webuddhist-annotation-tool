@@ -1,6 +1,9 @@
 import { useMemo, useState } from "react";
 import { IoChevronDown, IoChevronForward } from "react-icons/io5";
 import { getDisplayLabelForFilter, FILTER_KEY_SEP } from "@/utils/annotationConverter";
+import { useAnnotationColors } from "@/hooks/use-annotation-colors";
+
+const DEFAULT_TYPE_COLOR = "#6b7280";
 
 /** Annotation shape from API (annotation_type) or UI (type) */
 type AnnotationForFilter = {
@@ -38,6 +41,7 @@ export const AnnotationTypesFilter = ({
   onDeselectAllAnnotationTypes,
   onSetSelectedAnnotationTypes,
 }: AnnotationTypesFilterProps) => {
+  const { annotationTypeColors } = useAnnotationColors();
   const [expandedTypes, setExpandedTypes] = useState<Set<string>>(new Set());
 
   const toggleTypeExpanded = (typeName: string) => {
@@ -201,10 +205,21 @@ export const AnnotationTypesFilter = ({
                         />
                         <label
                           htmlFor={`filter-type-${typeName}`}
-                          className="flex-1 uppercase text-xs font-semibold text-gray-700 cursor-pointer py-1.5 pr-2 flex items-center justify-between"
+                          className="flex-1 uppercase text-xs font-semibold text-gray-700 cursor-pointer py-1.5 pr-2 flex items-center justify-between gap-2"
                         >
-                          <span>{typeName}</span>
-                          <span className="text-gray-500 font-normal">
+                          <span className="flex items-center gap-1.5 min-w-0">
+                            <span
+                              className="w-2.5 h-2.5 rounded flex-shrink-0 border border-gray-300"
+                              style={{
+                                backgroundColor:
+                                  annotationTypeColors[typeName] ?? DEFAULT_TYPE_COLOR,
+                              }}
+                              title={`Color for ${typeName}`}
+                              aria-hidden
+                            />
+                            <span className="truncate">{typeName}</span>
+                          </span>
+                          <span className="text-gray-500 font-normal flex-shrink-0">
                             {opts.reduce((s, o) => s + o.count, 0)}
                           </span>
                         </label>
