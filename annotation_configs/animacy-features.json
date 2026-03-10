@@ -1,0 +1,20 @@
+{
+  "version": "1.0",
+  "title": "Animacy",
+  "description": "Animacy classification for Tibetan text annotation. A category for labelling referents as human, animate, or inanimate. Can be manually added or corrected on tokens.",
+  "copyright": "© 2024 Buddhist AI Project",
+  "categories": [
+    {
+      "id": "animacy",
+      "name": "Animacy",
+      "description": "Animacy classification (human, animate, or inanimate)",
+      "level": 0,
+      "mnemonic": "LING-ANIM",
+      "subcategories": [
+        {"id": "animacy-human", "name": "human", "level": 1},
+        {"id": "animacy-animate", "name": "animate", "level": 1},
+        {"id": "animacy-inanimate", "name": "inanimate", "level": 1}
+      ]
+    }
+  ]
+}

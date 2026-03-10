@@ -3,6 +3,16 @@ import { AiOutlineLoading3Quarters } from "react-icons/ai"
 import { textApi } from "@/api/text"
 import { Button } from "@/components/ui/button"
 
+/** Strip script tags and event handlers so diplomatic XML can be rendered safely. */
+function sanitizeDiplomaticHtml(html: string): string {
+  if (!html) return ""
+  let out = html
+  out = out.replaceAll(/<script\b[^<]*(?:(?!<\/script>)<[^<]*)*<\/script>/gi, "")
+  out = out.replaceAll(/\s*on\w+\s*=\s*["'][^"']*["']/gi, "")
+  out = out.replaceAll(/\s*on\w+\s*=\s*[^\s>]+/gi, "")
+  return out
+}
+
 interface DiplomaticTextPanelProps {
   textId: number | undefined
   isVisible: boolean
@@ -79,7 +89,24 @@ export function DiplomaticTextPanel({
     textApi
       .parseDiplomaticFromTei(file)
       .then((res) => {
-        setParsedContent(res.diplomatic_text ?? "")
+        const content = res.diplomatic_text ?? ""
+        setParsedContent(content)
+        if (textId !== undefined && content !== undefined) {
+          setIsSaving(true)
+          setError(null)
+          textApi
+            .updateText(textId, { diplomatic_text: content })
+            .then(() => {
+              setDiplomaticText(content)
+              setTeiFile(null)
+              setParsedContent(null)
+              onDiplomaticSaved?.()
+            })
+            .catch((err) => {
+              setError(err instanceof Error ? err : new Error(String(err)))
+            })
+            .finally(() => setIsSaving(false))
+        }
       })
       .catch((err) => {
         setParseError(err instanceof Error ? err : new Error(String(err)))
@@ -95,24 +122,6 @@ export function DiplomaticTextPanel({
       fileInputRef.current.value = ""
       fileInputRef.current.click()
     }
-  }
-
-  const handleSaveDiplomatic = () => {
-    if (textId === undefined || parsedContent === null) return
-    setIsSaving(true)
-    setError(null)
-    textApi
-      .updateText(textId, { diplomatic_text: parsedContent })
-      .then(() => {
-        setDiplomaticText(parsedContent)
-        setTeiFile(null)
-        setParsedContent(null)
-        onDiplomaticSaved?.()
-      })
-      .catch((err) => {
-        setError(err instanceof Error ? err : new Error(String(err)))
-      })
-      .finally(() => setIsSaving(false))
   }
 
   const handleResetDiplomatic = () => {
@@ -155,7 +164,7 @@ export function DiplomaticTextPanel({
         )}
         {canAdd && (
           <div className="flex flex-col flex-1 min-h-0">
-            <p className="text-slate-600 text-sm mb-2">Upload a TEI XML file to extract text from <code className="text-xs bg-slate-100 px-1 rounded">&lt;text&gt;&lt;body&gt;&lt;div&gt;</code>. It will be parsed automatically.</p>
+            <p className="text-slate-600 text-sm mb-2">Upload a TEI XML file. The <code className="text-xs bg-slate-100 px-1 rounded">&lt;text&gt;…&lt;/text&gt;</code> section is saved as-is; tags like hi, add, unclear, decoration are shown with styling.</p>
             <input
               ref={fileInputRef}
               type="file"
@@ -187,39 +196,27 @@ export function DiplomaticTextPanel({
                 </Button>
               </div>
             )}
-            {teiFile && !isParsing && parsedContent !== null && !parseError && (
-              <div className="flex flex-col flex-1 min-h-0">
-                <p className="text-slate-600 text-sm mb-1">Extracted content:</p>
-                <pre className="flex-1 min-h-[80px] overflow-auto rounded border border-slate-200 p-2 text-xs text-slate-800 whitespace-pre-wrap bg-slate-50">
-                  {parsedContent || "(empty)"}
-                </pre>
-                <div className="mt-3 flex gap-2 shrink-0">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={handleReupload}
-                  >
-                    Re-upload
-                  </Button>
-                  <Button
-                    type="button"
-                    size="sm"
-                    onClick={handleSaveDiplomatic}
-                    disabled={isSaving}
-                  >
-                    {isSaving ? "Confirming..." : "Confirm diplomatic"}
-                  </Button>
-                </div>
+            {teiFile && !isParsing && parsedContent !== null && !parseError && isSaving && (
+              <div className="flex flex-col items-center justify-center py-6 gap-2">
+                <AiOutlineLoading3Quarters className="w-6 h-6 animate-spin text-blue-600" />
+                <p className="text-sm text-slate-600">Saving to database…</p>
               </div>
             )}
           </div>
         )}
         {hasContent && (
           <div className="flex flex-col flex-1 min-h-0">
-            <pre className="flex-1 whitespace-pre-wrap font-sans text-sm text-slate-800 leading-relaxed overflow-auto">
-              {diplomaticText}
-            </pre>
+            <style>{`
+              .diplomatic-view { white-space: pre-wrap; font-family: inherit; font-size: 0.875rem; line-height: 1.625; color: rgb(30 41 59); }
+              .diplomatic-view hi { text-decoration: line-through; color: rgb(100 116 139); }
+              .diplomatic-view add { text-decoration: underline; text-underline-offset: 2px; color: rgb(22 101 52); }
+              .diplomatic-view unclear { border-bottom: 1px dotted rgb(148 163 184); font-style: italic; color: rgb(71 85 105); }
+              .diplomatic-view decoration { color: rgb(148 163 184); font-weight: 500; }
+            `}</style>
+            <div
+              className="diplomatic-view flex-1 overflow-auto min-h-0"
+              dangerouslySetInnerHTML={{ __html: sanitizeDiplomaticHtml(diplomaticText ?? "") }}
+            />
             <div className="mt-3 shrink-0">
               <Button
                 type="button"

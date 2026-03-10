@@ -1,0 +1,22 @@
+{
+  "version": "1.0",
+  "title": "Semantic roles  Features",
+  "description": "semantic roles annotations including semantic roles. These features can be manually added or corrected.",
+  "copyright": "© 2024 Buddhist AI Project",
+  "categories": [
+    {
+      "id": "semantic-roles",
+      "name": "Semantic roles",
+      "description": "Semantic roles that can be manually added or corrected on tokens",
+      "level": 0,
+      "mnemonic": "LING-SR",
+      "subcategories": [
+        {"id": "sr-agent", "name": "agent", "level": 1},
+        {"id": "sr-patient", "name": "patient", "level": 1},
+        {"id": "sr-theme", "name": "theme", "level": 1},
+        {"id": "sr-recipient", "name": "recipient", "level": 1},
+        {"id": "sr-location", "name": "location", "level": 1}
+      ]
+    }
+  ]
+}

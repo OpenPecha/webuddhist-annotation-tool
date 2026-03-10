@@ -20,7 +20,7 @@ from schemas.annotation import AnnotationCreate
 from schemas.combined import TextWithAnnotations
 from schemas.user_rejected_text import RejectedTextWithDetails
 from utils.tei_parser import parse_tei, TEIAnnotation
-from utils.diplomatic_parser import parse_diplomatic_from_tei
+from utils.diplomatic_parser import extract_raw_text_section
 
 
 def get_status_options() -> dict:
@@ -516,9 +516,7 @@ def get_diplomatic_text(db: Session, current_user: User, text_id: int) -> dict:
 
 
 def parse_diplomatic_file(file: UploadFile) -> dict:
-    """Parse a TEI XML file with the diplomatic-only parser; return extracted diplomatic text.
-    Does not use the full TEI parser (tei_parser.parse_tei).
-    """
+    """Extract raw XML from <text> to </text> (inclusive) and return it. No parsing; save directly to DB."""
     filename = file.filename or ""
     if not (filename.lower().endswith(".xml") or file.content_type in ("text/xml", "application/xml")):
         raise HTTPException(
@@ -533,14 +531,13 @@ def parse_diplomatic_file(file: UploadFile) -> dict:
             status_code=status.HTTP_400_BAD_REQUEST,
             detail="File must be UTF-8 encoded",
         )
-    try:
-        diplomatic_text = parse_diplomatic_from_tei(content)
-    except ValueError as e:
+    diplomatic_text = extract_raw_text_section(content)
+    if diplomatic_text is None:
         raise HTTPException(
             status_code=status.HTTP_400_BAD_REQUEST,
-            detail=str(e),
+            detail="TEI document has no <text> section",
         )
-    return {"diplomatic_text": diplomatic_text if diplomatic_text is not None else ""}
+    return {"diplomatic_text": diplomatic_text}
 
 
 def read_text_with_annotations(
