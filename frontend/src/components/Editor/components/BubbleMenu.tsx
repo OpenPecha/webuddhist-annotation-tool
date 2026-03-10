@@ -482,7 +482,7 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
           (effectiveMode !== "error-list" || !selectedBubbleAnnotationType || errorData) && (
           <div className="max-h-60 overflow-y-auto overflow-x-hidden ">
             <div className="space-y-1">
-              {filteredItems.slice(0, 20).map((item) => {
+              {filteredItems.map((item) => {
                 const isStructural = effectiveMode === "table-of-contents";
                 const isAnnotationType =
                   effectiveMode === "error-list" && !selectedBubbleAnnotationType;
