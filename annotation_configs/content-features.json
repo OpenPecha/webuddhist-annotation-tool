@@ -77,14 +77,6 @@
     {"id": "bird_flying", "name": "bird_flying", "level": 0},
     {"id": "bird_hatching_eggs", "name": "bird_hatching_eggs", "level": 0},
     {"id": "bird_head", "name": "bird_head", "level": 0},
-    {"id": "blood", "name": "blood", "level": 0},
-    {
-      "id": "other",
-      "name": "Other",
-      "description": "Custom content features not in the predefined list. Users can type their own features.",
-      "level": 0,
-      "mnemonic": "CONT-OTHER",
-      "notes": "Use this option to add custom content features not listed above"
-    }
+    {"id": "blood", "name": "blood", "level": 0}
   ]
 }
