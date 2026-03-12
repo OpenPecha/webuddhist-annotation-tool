@@ -210,17 +210,19 @@ export const annotationField = StateField.define<AnnotationFieldState>({
           block: false,
         });
 
-        // Add to batch - widget first, then mark
+        // Add to batch - widget first, then mark (skip mark for position-only annotations; CodeMirror rejects empty marks)
         toAdd.push({
           from: annotation.start,
           to: annotation.start,
           decoration: labelDecoration,
         });
-        toAdd.push({
-          from: annotation.start,
-          to: annotation.end,
-          decoration: markDecoration,
-        });
+        if (annotation.start < annotation.end) {
+          toAdd.push({
+            from: annotation.start,
+            to: annotation.end,
+            decoration: markDecoration,
+          });
+        }
       } else if (effect.is(clearAnnotationsEffect)) {
         decorations = Decoration.none;
       }

@@ -66,6 +66,9 @@ export const useAnnotationOperations = (
     async (type: string): Promise<boolean> => {
       const currentMode = useAnnotationStore.getState().currentNavigationMode;
 
+      // Position-only types (line-break, page-break) are valid regardless of mode
+      if (type === "line-break" || type === "page-break") return true;
+
       if (currentMode === "table-of-contents") {
         const { STRUCTURAL_ANNOTATION_TYPES } = await import(
           "@/config/structural-annotations"

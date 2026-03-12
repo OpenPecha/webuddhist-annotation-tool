@@ -240,18 +240,17 @@ class AnnotationCRUD:
         text_length = len(text.content)
         if start_pos < 0 or end_pos < 0:
             return {"valid": False, "error": "Positions cannot be negative"}
-        
-        if start_pos >= text_length:
+        # Allow position at end of text (start_pos == end_pos == text_length) for line-break/page-break
+        if start_pos > text_length:
             return {"valid": False, "error": f"Start position ({start_pos}) exceeds text length ({text_length})"}
-        
         if end_pos > text_length:
             return {"valid": False, "error": f"End position ({end_pos}) exceeds text length ({text_length})"}
         
-        if start_pos >= end_pos:
-            return {"valid": False, "error": "Start position must be less than end position"}
+        if start_pos > end_pos:
+            return {"valid": False, "error": "Start position must be less than or equal to end position"}
         
-        # Extract the selected text
-        selected_text = text.content[start_pos:end_pos]
+        # Extract the selected text (empty when start_pos == end_pos, e.g. line-break/page-break)
+        selected_text = text.content[start_pos:end_pos] if start_pos < end_pos else ""
         
         # Note: Overlapping annotations are now allowed
         # overlapping = self.get_overlapping_annotations(

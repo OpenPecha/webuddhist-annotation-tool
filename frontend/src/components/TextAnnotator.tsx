@@ -89,7 +89,7 @@ export const TextAnnotator = forwardRef<TextAnnotatorRef, TextAnnotatorProps>(
 
     const shouldShowSplitView =
       hasTranslation && translation && showTranslation;
-
+    const textContent=text
     return (
       <div className="flex flex-col h-full">
         {/* Header with Search Bar and Translation Toggle */}
@@ -139,7 +139,7 @@ export const TextAnnotator = forwardRef<TextAnnotatorRef, TextAnnotatorProps>(
               <div className="h-full overflow-hidden">
                 <Editor
                   ref={editorRef}
-                  text={text}
+                  text={textContent}
                   annotations={annotations}
                   selectedText={selectedText}
                   onTextSelect={onTextSelect}
@@ -190,7 +190,7 @@ export const TextAnnotator = forwardRef<TextAnnotatorRef, TextAnnotatorProps>(
           <div className="flex-1 overflow-hidden">
             <Editor
               ref={editorRef}
-              text={text}
+              text={textContent}
               annotations={annotations}
               selectedText={selectedText}
               onTextSelect={onTextSelect}

@@ -81,7 +81,30 @@ export const STRUCTURAL_ANNOTATION_TYPES: StructuralAnnotationType[] = [
       "See also Chapter 3",
     ],
   },
+  {
+    id: "line-break",
+    name: "Line break",
+    description: "Structural line break (position marker between characters)",
+    color: "#475569", // slate-600
+    backgroundColor: "#e2e8f0", // slate-200
+    borderColor: "#94a3b8", // slate-400
+    icon: "↵",
+    examples: ["Line break here"],
+  },
+  {
+    id: "page-break",
+    name: "Page break",
+    description: "Page break or folio boundary (position marker)",
+    color: "#334155", // slate-700
+    backgroundColor: "#cbd5e1", // slate-300
+    borderColor: "#64748b", // slate-500
+    icon: "📄",
+    examples: ["Page break", "New folio"],
+  },
 ];
+
+/** Structural types that are inserted at a cursor position (no text selection). */
+export const POSITION_STRUCTURAL_TYPE_IDS = ["line-break", "page-break"];
 
 export const getStructuralAnnotationType = (
   id: string

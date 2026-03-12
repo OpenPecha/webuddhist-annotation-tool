@@ -22,8 +22,8 @@ class AnnotationBase(BaseModel):
 
     @validator('end_position')
     def validate_end_position(cls, v, values):
-        if 'start_position' in values and v <= values['start_position']:
-            raise ValueError('End position must be greater than start position')
+        if 'start_position' in values and v < values['start_position']:
+            raise ValueError('End position must be greater than or equal to start position')
         return v
 
     @validator('confidence')

@@ -7,6 +7,7 @@ import type { BubbleMenuProps } from "../types";
 import { useAuth } from "@/auth/use-auth-hook";
 import {
   STRUCTURAL_ANNOTATION_TYPES,
+  POSITION_STRUCTURAL_TYPE_IDS,
   isStructuralAnnotationType,
   type StructuralAnnotationType,
 } from "@/config/structural-annotations";
@@ -82,6 +83,17 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
   };
 
   const effectiveMode = getEffectiveAnnotationMode();
+  const isCursorPosition = currentSelection ? !currentSelection.text : false;
+
+  // When clicking with no selection (cursor position), only allow position annotations (line-break, page-break)
+  const structuralTypesToShow = isCursorPosition
+    ? STRUCTURAL_ANNOTATION_TYPES.filter((t) =>
+        POSITION_STRUCTURAL_TYPE_IDS.includes(t.id)
+      )
+    : STRUCTURAL_ANNOTATION_TYPES;
+  const effectiveModeForCursor = isCursorPosition
+    ? "table-of-contents"
+    : effectiveMode;
 
   // Load annotation list only after user selects an annotation type in the bubble (error-list mode)
   const typeIdForList =
@@ -188,10 +200,10 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
 
   // Filter items based on mode (categories only when type already selected in error-list)
   const filteredItems = useMemo((): (StructuralAnnotationType | CategoryWithBreadcrumb | AnnotationType)[] => {
-    if (effectiveMode === "table-of-contents") {
-      if (!searchQuery.trim()) return STRUCTURAL_ANNOTATION_TYPES;
+    if (effectiveModeForCursor === "table-of-contents") {
+      if (!searchQuery.trim()) return structuralTypesToShow;
       const query = searchQuery.toLowerCase();
-      return STRUCTURAL_ANNOTATION_TYPES.filter(
+      return structuralTypesToShow.filter(
         (type) =>
           type.name.toLowerCase().includes(query) ||
           type.description.toLowerCase().includes(query) ||
@@ -225,20 +237,20 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
       );
     }
     return items;
-  }, [errorData, searchQuery, effectiveMode, customErrorOptions, selectedBubbleAnnotationType, filteredAnnotationTypes]);
+  }, [errorData, searchQuery, effectiveMode, effectiveModeForCursor, structuralTypesToShow, customErrorOptions, selectedBubbleAnnotationType, filteredAnnotationTypes]);
 
   if (!visible || !currentSelection) return null;
 
   const handleAddAnnotation = () => {
     if (!currentSelection) return;
-    if (effectiveMode === "table-of-contents" && selectedStructuralType) {
+    if (effectiveModeForCursor === "table-of-contents" && selectedStructuralType) {
       onAddAnnotation(
         selectedStructuralType.id,
         undefined,
         annotationLevel || undefined
       );
     } else if (
-      effectiveMode === "error-list" &&
+      effectiveModeForCursor === "error-list" &&
       selectedBubbleAnnotationType &&
       selectedErrorCategory
     ) {
@@ -268,12 +280,12 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
   };
 
   const searchPlaceholder =
-    effectiveMode === "table-of-contents"
+    effectiveModeForCursor === "table-of-contents"
       ? "Search structural types..."
       : "Search categories...";
 
   const canSubmit =
-    effectiveMode === "table-of-contents"
+    effectiveModeForCursor === "table-of-contents"
       ? selectedStructuralType !== null
       : selectedBubbleAnnotationType !== null && selectedErrorCategory !== null;
 
@@ -306,8 +318,10 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
           </div>
         ) : (
           <p className="text-xs text-gray-500 mb-3">
-            {effectiveMode === "table-of-contents"
-              ? "Choose structural type:"
+            {effectiveModeForCursor === "table-of-contents"
+              ? isCursorPosition
+                ? "Add annotation at position:"
+                : "Choose structural type:"
               : selectedBubbleAnnotationType
                 ? `Choose annotation for ${selectedBubbleAnnotationType.name}:`
                 : "Choose annotation type:"}
@@ -315,7 +329,7 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
         )}
 
         {/* Back button when annotation type is selected (error-list step 2) */}
-        {effectiveMode === "error-list" && selectedBubbleAnnotationType && !selectedErrorCategory && (
+        {effectiveModeForCursor === "error-list" && selectedBubbleAnnotationType && !selectedErrorCategory && (
           <Button
             type="button"
             variant="ghost"
@@ -332,7 +346,7 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
 
         {/* Search box - only show for error-list mode or if no error selected */}
         {!isCreatingAnnotation &&
-          (annotationMode === "table-of-contents" ||
+          (effectiveModeForCursor === "table-of-contents" ||
             !selectedErrorCategory) && (
             <div className="mb-3">
               <div className="relative">
@@ -372,7 +386,7 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
                   </p>
                 )}
               {/* Add your own annotation - error-list mode */}
-              {effectiveMode === "error-list" && selectedBubbleAnnotationType && !isCreatingAnnotation && (
+              {effectiveModeForCursor === "error-list" && selectedBubbleAnnotationType && !isCreatingAnnotation && (
                 <div className="mt-2 flex gap-2">
                   <input
                     type="text"
@@ -436,7 +450,7 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
           )}
 
         {/* Selected Error Display - for error-list mode */}
-        {effectiveMode === "error-list" && selectedErrorCategory && (
+        {effectiveModeForCursor === "error-list" && selectedErrorCategory && (
           <div className="mb-3 p-3 bg-orange-50 border border-orange-200 rounded-md">
             <div className="flex items-center justify-between mb-2">
             <div className="text-sm font-medium text-orange-900">
@@ -466,7 +480,7 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
           </div>
         )}
 
-        {error && effectiveMode === "error-list" && selectedBubbleAnnotationType && (
+        {error && effectiveModeForCursor === "error-list" && selectedBubbleAnnotationType && (
           <div className="text-center py-4">
             <p className="text-xs text-red-500">
               {error instanceof Error ? error.message : "Failed to load list"}
@@ -483,9 +497,9 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
           <div className="max-h-60 overflow-y-auto overflow-x-hidden ">
             <div className="space-y-1">
               {filteredItems.map((item) => {
-                const isStructural = effectiveMode === "table-of-contents";
+                const isStructural = effectiveModeForCursor === "table-of-contents";
                 const isAnnotationType =
-                  effectiveMode === "error-list" && !selectedBubbleAnnotationType;
+                  effectiveModeForCursor === "error-list" && !selectedBubbleAnnotationType;
 
                 const itemId: string = isStructural
                   ? (item as StructuralAnnotationType).id
@@ -586,7 +600,7 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
           )}
 
         {/* Action buttons - for TOC mode */}
-        {effectiveMode === "table-of-contents" && !isCreatingAnnotation && (
+        {effectiveModeForCursor === "table-of-contents" && !isCreatingAnnotation && (
           <div className="flex gap-2 pt-3 border-t">
             <Button
               onClick={handleCancel}

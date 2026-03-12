@@ -405,97 +405,97 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
           const start = range.from;
           const end = range.to;
 
-          if (start !== end) {
-            const selectedText = textRef.current.substring(start, end);
-            const newCurrentSelection = {
-              text: selectedText,
-              startIndex: start,
-              endIndex: end,
-            };
+          const isCursorPosition = start === end;
+          const selectedText = isCursorPosition
+            ? ""
+            : textRef.current.substring(start, end);
+          const newCurrentSelection = {
+            text: selectedText,
+            startIndex: start,
+            endIndex: end,
+          };
 
-            setCurrentSelection(newCurrentSelection);
-            onTextSelect({ text: selectedText, start, end });
+          setCurrentSelection(newCurrentSelection);
+          onTextSelect({ text: selectedText, start, end });
 
-            // Position bubble menu
-            if (editorRef.current?.view) {
-              const view = editorRef.current.view;
-              const startCoords = view.coordsAtPos(start);
-              const endCoords = view.coordsAtPos(end);
+          // Position and show bubble menu (for both selection and cursor click)
+          if (editorRef.current?.view) {
+            const view = editorRef.current.view;
+            const startCoords = view.coordsAtPos(start);
+            const endCoords = view.coordsAtPos(end);
 
-              if (startCoords && endCoords) {
-                // Calculate position relative to viewport for portal
-                const selectionCenterX =
-                  (startCoords.left + endCoords.right) / 2;
-                const selectionBottom = Math.max(
-                  startCoords.bottom,
-                  endCoords.bottom
-                );
-                const selectionTop = Math.min(startCoords.top, endCoords.top);
+            if (startCoords && endCoords) {
+              const selectionCenterX = isCursorPosition
+                ? startCoords.left
+                : (startCoords.left + endCoords.right) / 2;
+              const selectionBottom = Math.max(
+                startCoords.bottom,
+                endCoords.bottom
+              );
+              const selectionTop = Math.min(startCoords.top, endCoords.top);
 
-                const viewportWidth = window.innerWidth;
-                const viewportHeight = window.innerHeight;
-                const bubbleWidth = 380;
-                const bubbleHeight = 350; // Must match BubbleMenu actual height (search, list max-h-60, buttons) to avoid overlapping selection
-                const margin = 10;
+              const viewportWidth = window.innerWidth;
+              const viewportHeight = window.innerHeight;
+              const bubbleWidth = 380;
+              const bubbleHeight = 350; // Must match BubbleMenu actual height (search, list max-h-60, buttons) to avoid overlapping selection
+              const margin = 10;
 
-                // Determine positioning with more spacing
-                const spaceBelow = viewportHeight - selectionBottom;
-                const spaceAbove = selectionTop;
-                const bubbleSpacing = 20; // Increased spacing from selection
+              const spaceBelow = viewportHeight - selectionBottom;
+              const spaceAbove = selectionTop;
+              const bubbleSpacing = 20;
 
-                let bubbleY =
-                  spaceBelow >= bubbleHeight + margin + bubbleSpacing
-                    ? selectionBottom + bubbleSpacing
-                    : spaceAbove >= bubbleHeight + margin + bubbleSpacing
-                    ? selectionTop - bubbleHeight - bubbleSpacing
-                    : spaceBelow > spaceAbove
-                    ? selectionBottom + bubbleSpacing
-                    : selectionTop - bubbleHeight - bubbleSpacing;
+              let bubbleY =
+                spaceBelow >= bubbleHeight + margin + bubbleSpacing
+                  ? selectionBottom + bubbleSpacing
+                  : spaceAbove >= bubbleHeight + margin + bubbleSpacing
+                  ? selectionTop - bubbleHeight - bubbleSpacing
+                  : spaceBelow > spaceAbove
+                  ? selectionBottom + bubbleSpacing
+                  : selectionTop - bubbleHeight - bubbleSpacing;
 
-                // Ensure bounds within viewport
-                if (bubbleY < margin) bubbleY = margin;
-                else if (bubbleY + bubbleHeight > viewportHeight - margin) {
-                  bubbleY = viewportHeight - bubbleHeight - margin;
-                }
-
-                // Horizontal positioning
-                let bubbleX = selectionCenterX;
-                const bubbleTransformX = "-50%";
-                const bubbleHalfWidth = bubbleWidth / 2;
-
-                if (bubbleX - bubbleHalfWidth < margin) {
-                  bubbleX = bubbleHalfWidth + margin;
-                } else if (bubbleX + bubbleHalfWidth > viewportWidth - margin) {
-                  bubbleX = viewportWidth - bubbleHalfWidth - margin;
-                }
-
-                // Store initial scroll position and bubble position
-                const scrollElement = editorRef.current.view.scrollDOM;
-                initialScrollPositionRef.current = {
-                  top: scrollElement.scrollTop,
-                  left: scrollElement.scrollLeft,
-                };
-                initialBubblePositionRef.current = { x: bubbleX, y: bubbleY };
-
-                // Show bubble menu on selection (position correct regardless of filter/readOnly)
-                setBubbleMenuPosition({
-                  x: bubbleX,
-                  y: bubbleY,
-                  transformX: bubbleTransformX,
-                });
-                setBubbleMenuVisible(true);
+              if (bubbleY < margin) bubbleY = margin;
+              else if (bubbleY + bubbleHeight > viewportHeight - margin) {
+                bubbleY = viewportHeight - bubbleHeight - margin;
               }
+
+              let bubbleX = selectionCenterX;
+              const bubbleTransformX = "-50%";
+              const bubbleHalfWidth = bubbleWidth / 2;
+
+              if (bubbleX - bubbleHalfWidth < margin) {
+                bubbleX = bubbleHalfWidth + margin;
+              } else if (bubbleX + bubbleHalfWidth > viewportWidth - margin) {
+                bubbleX = viewportWidth - bubbleHalfWidth - margin;
+              }
+
+              const scrollElement = editorRef.current.view.scrollDOM;
+              initialScrollPositionRef.current = {
+                top: scrollElement.scrollTop,
+                left: scrollElement.scrollLeft,
+              };
+              initialBubblePositionRef.current = { x: bubbleX, y: bubbleY };
+
+              setBubbleMenuPosition({
+                x: bubbleX,
+                y: bubbleY,
+                transformX: bubbleTransformX,
+              });
+              setBubbleMenuVisible(true);
             }
-          } else {
+          }
+        } else {
+          // Only close bubble when selection is cleared; if bubble is visible, user may be clicking inside it
+          if (!bubbleMenuVisible) {
             resetBubbleMenu();
             onTextSelect(null);
-            if (deletePopupVisible) {
-              resetDeletePopup();
-            }
+          }
+          if (deletePopupVisible) {
+            resetDeletePopup();
           }
         }
       },
       [
+        bubbleMenuVisible,
         deletePopupVisible,
         onTextSelect,
         resetBubbleMenu,

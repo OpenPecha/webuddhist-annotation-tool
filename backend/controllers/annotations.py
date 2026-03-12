@@ -6,9 +6,13 @@ from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
 
 from crud.annotation import annotation_crud
+from crud.annotation_type import annotation_type_crud
 from crud.text import text_crud
 from models.user import User
 from schemas.annotation import AnnotationCreate, AnnotationUpdate
+
+# Position-only annotation types (line-break, page-break): ensure type exists in DB on first add
+POSITION_ANNOTATION_TYPES = ("line-break", "page-break")
 
 
 def read_annotations(
@@ -54,6 +58,14 @@ def create_annotation(
                 detail=f"Role '{current_user.role.value}' is not allowed to create annotations",
             )
 
+    # Ensure line-break/page-break annotation types exist in DB (create on first add)
+    if annotation_in.annotation_type in POSITION_ANNOTATION_TYPES:
+        annotation_type_crud.get_or_create(
+            db=db,
+            name=annotation_in.annotation_type,
+            uploader_id=getattr(current_user, "auth0_user_id", None),
+        )
+
     validation_result = annotation_crud.validate_annotation_positions(
         db=db,
         text_id=annotation_in.text_id,
@@ -65,7 +77,7 @@ def create_annotation(
             status_code=status.HTTP_400_BAD_REQUEST,
             detail=validation_result["error"],
         )
-    if not annotation_in.selected_text:
+    if annotation_in.selected_text is None or annotation_in.selected_text == "":
         annotation_in.selected_text = validation_result["selected_text"]
 
     return annotation_crud.create(
