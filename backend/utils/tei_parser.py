@@ -9,7 +9,7 @@ Parses TEI P5 documents (Transkribus/OpenPecha style) and extracts:
 
 import xml.etree.ElementTree as ET
 from dataclasses import dataclass, field
-from typing import List, Optional, Set
+from typing import List, Optional, Set, Tuple
 
 TEI_NS = "http://www.tei-c.org/ns/1.0"
 
@@ -211,13 +211,29 @@ def _text_from_segmented(body: ET.Element) -> Optional[str]:
 def _text_and_annotations_from_annotated(
     body: ET.Element,
 ) -> tuple[Optional[str], List[TEIAnnotation]]:
-    """Extract text and POS annotations from annotated layer."""
+    """Extract text and POS annotations from annotated layer.
+
+    Inserts a newline after each <u> (utterance) so text is separated by segments.
+    Annotation start/end positions account for these newlines so span addresses stay correct.
+    """
     for div in body.iter(_ns("div")):
         if div.get("type") == "transcription" and div.get("subtype") == "annotated":
+            # Build list of (w, add_newline_after): when <u> exists, add newline after last w of each <u>
+            word_items: List[Tuple[ET.Element, bool]] = []
+            u_elements = div.findall(f"./{_ns('u')}")
+            if u_elements:
+                for u in u_elements:
+                    ws = list(u.iter(_ns("w")))
+                    for w in ws:
+                        word_items.append((w, w is ws[-1]))
+            else:
+                for w in div.iter(_ns("w")):
+                    word_items.append((w, False))
+
             content_parts = []
             annotations = []
             current_pos = 0
-            for w in div.iter(_ns("w")):
+            for w, add_newline_after in word_items:
                 text = (w.text or "").strip()
                 if text:
                     start = current_pos
@@ -236,7 +252,10 @@ def _text_and_annotations_from_annotated(
                             meta=meta,
                         )
                     )
-            content = "".join(content_parts).strip()
+                if add_newline_after:
+                    content_parts.append("\n")
+                    current_pos += 1
+            content = "".join(content_parts).rstrip() if u_elements else "".join(content_parts).strip()
             return content, annotations
     return None, []
 
