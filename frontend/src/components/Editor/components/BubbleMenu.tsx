@@ -85,12 +85,14 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
   const effectiveMode = getEffectiveAnnotationMode();
   const isCursorPosition = currentSelection ? !currentSelection.text : false;
 
-  // When clicking with no selection (cursor position), only allow position annotations (line-break, page-break)
+  // Cursor position: only line-break, page-break. Selection with text (≥1 char): hide line-break and page-break.
   const structuralTypesToShow = isCursorPosition
     ? STRUCTURAL_ANNOTATION_TYPES.filter((t) =>
         POSITION_STRUCTURAL_TYPE_IDS.includes(t.id)
       )
-    : STRUCTURAL_ANNOTATION_TYPES;
+    : STRUCTURAL_ANNOTATION_TYPES.filter(
+        (t) => !POSITION_STRUCTURAL_TYPE_IDS.includes(t.id)
+      );
   const effectiveModeForCursor = isCursorPosition
     ? "table-of-contents"
     : effectiveMode;
@@ -496,7 +498,7 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
           (effectiveMode !== "error-list" || !selectedBubbleAnnotationType || errorData) && (
           <div className="max-h-60 overflow-y-auto overflow-x-hidden ">
             <div className="space-y-1">
-              {filteredItems.map((item) => {
+              {filteredItems.filter((item) => item.name !== "line-break" && item.name !== "page-break").map((item) => {
                 const isStructural = effectiveModeForCursor === "table-of-contents";
                 const isAnnotationType =
                   effectiveModeForCursor === "error-list" && !selectedBubbleAnnotationType;
