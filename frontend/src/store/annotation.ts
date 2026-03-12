@@ -38,30 +38,7 @@ export const useAnnotationStore = create<AnnotationState>()(
     }),
     {
       name: "annotation-store", // localStorage key
-      storage: {
-        getItem: (name) => {
-          const str = localStorage.getItem(name);
-          if (!str) return null;
-          const { state } = JSON.parse(str);
-          return {
-            state: {
-              ...state,
-              selectedAnnotationTypes: new Set(state.selectedAnnotationTypes || []),
-            },
-          };
-        },
-        setItem: (name, value) => {
-          const str = JSON.stringify({
-            state: {
-              ...value.state,
-              selectedAnnotationTypes: Array.from(value.state.selectedAnnotationTypes),
-            },
-          });
-          localStorage.setItem(name, str);
-        },
-        removeItem: (name) => localStorage.removeItem(name),
-      },
-      // Only persist certain keys that should survive page refresh
+      // Only persist certain keys (no custom storage; selectedAnnotationTypes lives in annotationFilters store)
       partialize: (state) => ({
         navigationOpen: state.navigationOpen,
         sidebarOpen: state.sidebarOpen,

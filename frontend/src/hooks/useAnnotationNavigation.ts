@@ -35,7 +35,11 @@ export const useAnnotationNavigation = (annotations: Annotation[]) => {
    */
   const scrollToAnnotation = useCallback((annotation: Annotation) => {
     if (textAnnotatorRef.current) {
-      textAnnotatorRef.current.scrollToPosition(annotation.start, annotation.end);
+      textAnnotatorRef.current.scrollToPosition(annotation.start, annotation.end, { select: false });
+      setTimeout(() => {
+        textAnnotatorRef.current.scrollToPosition(annotation.start, annotation.end, { select: false });
+      }, 100);
+
     }
   }, []);
 

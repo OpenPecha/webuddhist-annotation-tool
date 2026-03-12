@@ -121,15 +121,22 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     }, []);
 
     useImperativeHandle(ref, () => ({
-      scrollToPosition: (start: number, end: number) => {
+      scrollToPosition: (start: number, end: number, options?: { select?: boolean }) => {
         if (editorRef.current) {
           const view = editorRef.current.view;
           if (view) {
-            view.dispatch({
-              selection: { anchor: start, head: end },
-              effects: EditorView.scrollIntoView(start, { y: "center" }),
-            });
-            view.focus();
+            const select = options?.select !== false;
+            if (select) {
+              view.dispatch({
+                selection: { anchor: start, head: end },
+                effects: EditorView.scrollIntoView(start, { y: "center" }),
+              });
+              view.focus();
+            } else {
+              view.dispatch({
+                effects: EditorView.scrollIntoView(start, { y: "center" }),
+              });
+            }
           }
         }
       },

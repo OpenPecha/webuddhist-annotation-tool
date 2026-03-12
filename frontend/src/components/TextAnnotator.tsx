@@ -44,7 +44,7 @@ interface TextAnnotatorProps {
 }
 
 export type TextAnnotatorRef = {
-  scrollToPosition: (start: number, end: number) => void;
+  scrollToPosition: (start: number, end: number, options?: { select?: boolean }) => void;
 };
 
 export const TextAnnotator = forwardRef<TextAnnotatorRef, TextAnnotatorProps>(
@@ -78,8 +78,8 @@ export const TextAnnotator = forwardRef<TextAnnotatorRef, TextAnnotatorProps>(
     );
 
     useImperativeHandle(ref, () => ({
-      scrollToPosition: (start: number, end: number) => {
-        editorRef.current?.scrollToPosition(start, end);
+      scrollToPosition: (start: number, end: number, options?: { select?: boolean }) => {
+        editorRef.current?.scrollToPosition(start, end, options);
       },
     }));
 

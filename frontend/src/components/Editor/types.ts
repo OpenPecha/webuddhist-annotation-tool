@@ -33,8 +33,13 @@ export interface EditorProps {
   hideScrollbar?: boolean;
 }
 
+export type ScrollToPositionOptions = {
+  /** When false, only scroll into view without changing selection. Default true. */
+  select?: boolean;
+};
+
 export type EditorRef = {
-  scrollToPosition: (start: number, end: number) => void;
+  scrollToPosition: (start: number, end: number, options?: ScrollToPositionOptions) => void;
 };
 
 export interface CurrentSelection {
