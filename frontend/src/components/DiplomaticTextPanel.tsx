@@ -213,6 +213,21 @@ export function DiplomaticTextPanel({
               .diplomatic-view unclear { border-bottom: 1px dotted rgb(148 163 184); font-style: italic; color: rgb(71 85 105); }
               .diplomatic-view decoration { color: rgb(148 163 184); font-weight: 500; }
             `}</style>
+            <div className="flex flex-wrap items-center gap-x-4 gap-y-1.5 pb-2 mb-2 border-b border-slate-200 text-xs text-slate-600 shrink-0">
+              <span className="font-medium text-slate-500">Tags:</span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded border border-amber-300 shrink-0" style={{ backgroundColor: "#fde68a" }} aria-hidden />
+                <span>add (place)</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded border border-slate-300 shrink-0" style={{ backgroundColor: "#e2e8f0" }} aria-hidden />
+                <span>hi (style)</span>
+              </span>
+              <span className="flex items-center gap-1.5">
+                <span className="w-3 h-3 rounded border border-slate-400 shrink-0" style={{ backgroundColor: "#9ca3af" }} aria-hidden />
+                <span>unclear</span>
+              </span>
+            </div>
             <div
               className="diplomatic-view flex-1 overflow-auto min-h-0"
               dangerouslySetInnerHTML={{ __html: sanitizeDiplomaticHtml(diplomaticText ?? "") }}

@@ -3,77 +3,102 @@ text{
     font-family: var(--font-monlam, 'monlam', sans-serif), sans-serif;
   }
   
-  add, hi ,unclear{
+  /* Label on top of content to avoid overlaps when nested or adjacent */
+  add, hi, unclear {
     display: inline-block;
+    vertical-align: top;
     border-radius: 6px;
-    padding: 0.175em 0.65em 0.175em 2.7em; /* enough space for tag label */
+    padding: 0.25em 0.5em 0.35em;
+    margin: 0 0.15em 0.2em 0;
     font-size: 0.98em;
     font-weight: 500;
-    vertical-align: middle;
-    box-shadow: 0 1px 2px rgba(0,0,0,0.04);
+    box-shadow: 0 1px 2px rgba(0,0,0,0.06);
     position: relative;
     cursor: pointer;
   }
-  
-  /* Unique color palette for each tag */
+
   add {
-    background-color: #fde68a; /* gold/yellow */
+    background-color: #fde68a;
     color: #7c4c00;
   }
-  
+
   add:hover, add:focus {
     background-color: #fcd34d;
     color: #684004;
-  }
-  
-  hi {
-    background-color: #a5d8ff; /* soft blue */
-    color: #205072;
-  }
-  
-  hi:hover, hi:focus {
-    background-color: #74c0fc;
-    color: #173d4e;
   }
 
   unclear {
     background-color: #9ca3af;
     color: #f8faff;
-    padding-left: 4.5em; /* longer label needs more space than shared 2.7em */
   }
 
   unclear:hover, unclear:focus {
     background-color: #74c0fc;
-    color: #173d4e; 
+    color: #173d4e;
   }
-  
-  /* Tag "label" before content */
+
+  /* Tag label on its own line above content (avoids overlap) */
   add::before,
-  hi::before ,unclear::before{
-    position: absolute;
-    left: 0.55em;
-    top: 50%;
-    transform: translateY(-50%);
-    font-size: 0.77em;
+  hi::before,
+  unclear::before {
+    display: block;
+    font-size: 0.7em;
     font-weight: 700;
-    padding: 0.1em 0.45em;
+    padding: 0.15em 0.4em;
     border-radius: 4px;
-    opacity: 0.85;
+    margin-bottom: 0.2em;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 100%;
   }
-  
-  add::before {
+
+  /* add: show place value in label (not "add") */
+  add[place]::before {
+    content: attr(place);
+    background: #f59e42;
+    color: #fffdfa;
+  }
+
+  add:not([place])::before {
     content: "add";
     background: #f59e42;
     color: #fffdfa;
   }
 
-  /* Show place attribute value on hover */
+  /* hi: show style (e.g. text-decoration value) in label (not "hi") */
+  hi[style]::before {
+    content: attr(style);
+    font-size: 0.6em;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+    background: #94a3b8;
+    color: #f8faff;
+  }
+
+  hi:not([style])::before {
+    content: "hi";
+    background: #94a3b8;
+    color: #f8faff;
+  }
+
+  hi {
+    background-color: #e2e8f0;
+    color: #475569;
+  }
+
+  hi:hover, hi:focus {
+    background-color: #cbd5e1;
+    color: #334155;
+  }
+
   add[place]:hover::after {
     content: "place: " attr(place);
     position: absolute;
     left: 0;
     bottom: 100%;
-    margin-bottom: 0.35em;
+    margin-bottom: 0.25em;
     padding: 0.25em 0.5em;
     font-size: 0.8em;
     font-weight: 500;
@@ -85,14 +110,10 @@ text{
     z-index: 1;
   }
   
-  hi::before {
-    content: "hi";
-    background: #339af0;
-    color: #f8faff;
-  }
+ 
   
   unclear::before {
     content: "unclear";
-    background: #9ca3af;
+    background: #6b7280;
     color: #f8faff;
   }
