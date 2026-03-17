@@ -1,0 +1,16 @@
+{
+  "version": "1.0",
+  "title": "Text Correction",
+  "description": "Schema for Tibetan text correction. Use for spelling and orthographic corrections, typo fixes, or to suggest improvements in the original text. No category options required.",
+  "copyright": "© 2024 Buddhist AI Project",
+  "categories": [{
+    "id": "Other",
+    "name": "Other",
+    "description": "Other text correction that can be manually added or corrected on tokens",
+    "level": 0,
+    "mnemonic": "TEXT-COR",
+    "subcategories": [
+     
+    ]
+  }]
+}

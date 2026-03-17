@@ -392,7 +392,11 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
                 <div className="mt-2 flex gap-2">
                   <input
                     type="text"
-                    placeholder="Can't find it? Add your own..."
+                    placeholder={
+                      selectedBubbleAnnotationType?.name === "Text Correction"
+                        ? "Add the correct one here"
+                        : "Can't find it? Add your own..."
+                    }
                     value={customInput}
                     onChange={(e) => setCustomInput(e.target.value)}
                     autoComplete="off"
@@ -593,7 +597,7 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
                   <div className="flex items-center justify-center gap-2">
                     <span>Add Annotation</span>
                     <span className="text-xs opacity-75">
-                      ({selectedErrorCategory.mnemonic}
+                      {selectedErrorCategory.mnemonic}
                     </span>
                   </div>
                 )}
