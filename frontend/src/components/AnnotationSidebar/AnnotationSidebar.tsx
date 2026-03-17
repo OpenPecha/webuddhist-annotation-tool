@@ -11,6 +11,7 @@ import {
   IoChatbubbleEllipses,
   IoCheckmarkCircle,
   IoCloseCircle,
+  IoRepeat,
 } from "react-icons/io5";
 import { getAnnotationDisplayLabel, type Annotation } from "@/utils/annotationConverter";
 import {
@@ -27,6 +28,7 @@ interface AnnotationSidebarProps {
   annotations: Annotation[];
   onRemoveAnnotation: (id: string) => void;
   onAnnotationClick?: (annotation: Annotation) => void;
+  onApplyToAll?: (annotation: Annotation) => void;
   isOpen: boolean;
   onToggle: () => void;
 }
@@ -41,6 +43,7 @@ interface AnnotationRowProps {
   getAnnotationStyle: (annotation: Annotation) => React.CSSProperties;
   onAnnotationClick?: (annotation: Annotation) => void;
   onRemoveAnnotation: (id: string) => void;
+  onApplyToAll?: (annotation: Annotation) => void;
 }
 
 interface ListRowProps {
@@ -50,6 +53,7 @@ interface ListRowProps {
   getAnnotationColor: (level?: string, type?: string) => string;
   getAnnotationStyle: (annotation: Annotation) => React.CSSProperties;
   onRemoveAnnotation: (id: string) => void;
+  onApplyToAll?: (annotation: Annotation) => void;
 }
 
 function AnnotationListRow(
@@ -59,7 +63,7 @@ function AnnotationListRow(
     ariaAttributes: { role: "listitem"; "aria-posinset": number; "aria-setsize": number };
   } & ListRowProps
 ) {
-  const { index, style, ariaAttributes, annotations, onScrollRowIntoView, onAnnotationClick, getAnnotationColor, getAnnotationStyle, onRemoveAnnotation } = props;
+  const { index, style, ariaAttributes, annotations, onScrollRowIntoView, onAnnotationClick, getAnnotationColor, getAnnotationStyle, onRemoveAnnotation, onApplyToAll } = props;
   const annotation = annotations[index];
   if (!annotation) return null;
   return (
@@ -73,6 +77,7 @@ function AnnotationListRow(
       getAnnotationColor={getAnnotationColor}
       getAnnotationStyle={getAnnotationStyle}
       onRemoveAnnotation={onRemoveAnnotation}
+      onApplyToAll={onApplyToAll}
     />
   );
 }
@@ -87,6 +92,7 @@ function AnnotationRow({
   getAnnotationStyle,
   onAnnotationClick,
   onRemoveAnnotation,
+  onApplyToAll,
 }: AnnotationRowProps) {
   const handleClick = (e: React.MouseEvent) => {
     e.stopPropagation();
@@ -148,17 +154,33 @@ function AnnotationRow({
               <IoLockClosed className="h-3 w-3 text-green-600" />
             </div>
           ) : (
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={(e) => {
-                e.stopPropagation();
-                onRemoveAnnotation(annotation.id);
-              }}
-              className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 opacity-0 group-hover:opacity-100 transition-opacity duration-200"
-            >
-              <IoTrash className="h-3 w-3" />
-            </Button>
+            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
+              {onApplyToAll && (
+                <Button
+                  variant="ghost"
+                  size="sm"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    onApplyToAll(annotation);
+                  }}
+                  className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+                  title="Apply to all occurrences of this text"
+                >
+                  <IoRepeat className="h-3 w-3" />
+                </Button>
+              )}
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={(e) => {
+                  e.stopPropagation();
+                  onRemoveAnnotation(annotation.id);
+                }}
+                className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
+              >
+                <IoTrash className="h-3 w-3" />
+              </Button>
+            </div>
           )}
         </div>
         <p className="text-sm font-monlam leading-[normal] text-gray-900 font-medium mb-1 break-words">
@@ -220,6 +242,7 @@ export const AnnotationSidebar = ({
   annotations,
   onRemoveAnnotation,
   onAnnotationClick,
+  onApplyToAll,
   isOpen,
   onToggle,
 }: AnnotationSidebarProps) => {
@@ -286,6 +309,7 @@ export const AnnotationSidebar = ({
     getAnnotationColor,
     getAnnotationStyle,
     onRemoveAnnotation,
+    onApplyToAll,
   };
 
   return (

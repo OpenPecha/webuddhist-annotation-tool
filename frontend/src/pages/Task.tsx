@@ -125,6 +125,7 @@ const Index = () => {
    */
   const {
     addAnnotation: addAnnotationFn,
+    applyAnnotationToAll,
     updateAnnotation,
     removeAnnotation,
     handleHeaderSelected,
@@ -383,6 +384,7 @@ const Index = () => {
             annotations={annotationsWithoutHeader}
             onRemoveAnnotation={removeAnnotation}
             onAnnotationClick={handleAnnotationClick}
+            onApplyToAll={applyAnnotationToAll}
             isOpen={sidebarOpen}
             onToggle={toggleSidebar}
           />

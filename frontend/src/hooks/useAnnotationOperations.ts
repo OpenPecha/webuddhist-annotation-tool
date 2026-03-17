@@ -18,7 +18,7 @@ import { useCustomAnnotationsStore } from "@/store/customAnnotations";
 import { TOAST_MESSAGES } from "@/constants/taskConstants";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/constants/queryKeys";
-import { getDisplayLabelForFilter } from "@/utils/annotationConverter";
+import { getDisplayLabelForFilter, type Annotation } from "@/utils/annotationConverter";
 
 /**
  * Custom hook that encapsulates all annotation CRUD operations
@@ -219,6 +219,103 @@ export const useAnnotationOperations = (
       },
     });
   }, [textId, validateAnnotationType, currentUserId, toast, createAnnotationMutation, autoCheckAnnotationType, queryClient]);
+
+  /**
+   * Find all non-overlapping occurrences of search in text.
+   */
+  const findAllOccurrences = useCallback((fullText: string, search: string): { start: number; end: number }[] => {
+    if (!search) return [];
+    const spans: { start: number; end: number }[] = [];
+    let start = 0;
+    while (true) {
+      const idx = fullText.indexOf(search, start);
+      if (idx === -1) break;
+      spans.push({ start: idx, end: idx + search.length });
+      start = idx + search.length;
+    }
+    return spans;
+  }, []);
+
+  /**
+   * Apply the same annotation (type, name, level) to all other occurrences of the annotation's text in the document.
+   * Skips spans that already have an annotation with the same type and label.
+   */
+  const applyAnnotationToAll = useCallback(async (annotation: Annotation) => {
+    if (!textId) return;
+    const textIdNumber = parseInt(textId, 10);
+    if (isNaN(textIdNumber)) return;
+
+    const isValidType = await validateAnnotationType(annotation.type);
+    if (!isValidType) {
+      toast({
+        title: TOAST_MESSAGES.INVALID_TYPE,
+        description: "Invalid annotation type.",
+      });
+      return;
+    }
+
+    const cacheKey = queryKeys.texts.withAnnotations(textIdNumber);
+    const cached = queryClient.getQueryData<TextWithAnnotations>(cacheKey);
+    const existingApi = cached?.annotations ?? [];
+    const targetKey = getDisplayLabelForFilter(annotation);
+
+    const occurrences = findAllOccurrences(text, annotation.text);
+    const toCreate = occurrences.filter(({ start, end }) => {
+      const alreadyHasSame = existingApi.some(
+        (a) =>
+          getDisplayLabelForFilter(a) === targetKey &&
+          a.start_position === start &&
+          a.end_position === end
+      );
+      return !alreadyHasSame;
+    });
+
+    if (toCreate.length === 0) {
+      toast({
+        title: "Apply to all",
+        description: "No other occurrences to annotate (all are already annotated or none found).",
+      });
+      return;
+    }
+
+    const labelValue = annotation.name?.trim() ?? annotation.label ?? annotation.type;
+    const createDataList: AnnotationCreate[] = toCreate.map(({ start, end }) => ({
+      text_id: textIdNumber,
+      annotation_type: annotation.type,
+      start_position: start,
+      end_position: end,
+      selected_text: annotation.text,
+      confidence: 1.0,
+      label: labelValue,
+      name: annotation.name,
+      level: annotation.level as "minor" | "major" | "critical" | undefined,
+      meta: {},
+    }));
+
+    toast({
+      title: "Applying to all",
+      description: `Adding annotation to ${toCreate.length} occurrence(s)...`,
+    });
+
+    try {
+      await Promise.all(
+        createDataList.map((data) => createAnnotationMutation.mutateAsync(data))
+      );
+      queryClient.invalidateQueries({ queryKey: cacheKey });
+      const filterKey = getDisplayLabelForFilter(annotation);
+      if (filterKey) autoCheckAnnotationType(filterKey);
+      toast({
+        title: TOAST_MESSAGES.ANNOTATION_CREATED,
+        description: `Applied to ${toCreate.length} occurrence(s).`,
+      });
+    } catch (error) {
+      queryClient.invalidateQueries({ queryKey: cacheKey });
+      toast({
+        title: TOAST_MESSAGES.ANNOTATION_CREATE_FAILED,
+        description: error instanceof Error ? error.message : "Failed to apply to all occurrences",
+      });
+    }
+  }, [textId, text, validateAnnotationType, toast, createAnnotationMutation, queryClient, findAllOccurrences, autoCheckAnnotationType]);
 
   /**
    * Update annotation in place via PUT (label, name, level).
@@ -606,6 +703,7 @@ export const useAnnotationOperations = (
   return {
     // Functions
     addAnnotation,
+    applyAnnotationToAll,
     updateAnnotation,
     removeAnnotation,
     handleHeaderSelected,
