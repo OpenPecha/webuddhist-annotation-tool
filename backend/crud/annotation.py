@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Tuple
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from models.annotation import Annotation
@@ -267,6 +267,92 @@ class AnnotationCRUD:
             "valid": True, 
             "selected_text": selected_text
         }
+
+    def create_many(
+        self,
+        db: Session,
+        text_id: int,
+        annotation_type: str,
+        label: Optional[str],
+        name: Optional[str],
+        level: Optional[str],
+        selected_text: str,
+        spans: List[Tuple[int, int]],
+        annotator_id: Optional[int],
+    ) -> List[Annotation]:
+        """Create multiple annotations at the given spans in one transaction. Validates each span."""
+        text = db.query(Text).filter(Text.id == text_id).first()
+        if not text:
+            return []
+        created = []
+        for start_pos, end_pos in spans:
+            result = self.validate_annotation_positions(
+                db=db, text_id=text_id, start_pos=start_pos, end_pos=end_pos
+            )
+            if not result["valid"]:
+                continue
+            db_obj = Annotation(
+                text_id=text_id,
+                annotator_id=annotator_id,
+                annotation_type=annotation_type,
+                start_position=start_pos,
+                end_position=end_pos,
+                selected_text=selected_text or result.get("selected_text"),
+                label=label,
+                name=name,
+                level=level,
+                meta={},
+                confidence=100,
+            )
+            db.add(db_obj)
+            created.append(db_obj)
+        if created:
+            text_obj = db.query(Text).filter(Text.id == text_id).first()
+            if text_obj and text_obj.status == INITIALIZED:
+                text_obj.status = PROGRESS
+                db.add(text_obj)
+            db.commit()
+            for obj in created:
+                db.refresh(obj)
+        return created
+
+    def delete_by_criteria(
+        self,
+        db: Session,
+        text_id: int,
+        annotation_type: str,
+        label: Optional[str],
+        selected_text: str,
+        annotator_id: Optional[int] = None,
+    ) -> int:
+        """Delete all annotations matching criteria (non-agreed only). If annotator_id is set, only that user's. Returns deleted count."""
+        query = db.query(Annotation).filter(
+            Annotation.text_id == text_id,
+            Annotation.annotation_type == annotation_type,
+            Annotation.selected_text == selected_text,
+        )
+        if label is not None:
+            query = query.filter(Annotation.label == label)
+        else:
+            query = query.filter(Annotation.label.is_(None))
+        if annotator_id is not None:
+            query = query.filter(Annotation.annotator_id == annotator_id)
+        to_delete = query.all()
+        deleted = 0
+        for ann in to_delete:
+            if self.is_annotation_agreed(db, ann.id):
+                continue
+            db.delete(ann)
+            deleted += 1
+        if deleted:
+            remaining = db.query(Annotation).filter(Annotation.text_id == text_id).count()
+            if remaining == 0:
+                text = db.query(Text).filter(Text.id == text_id).first()
+                if text and text.status == ANNOTATED:
+                    text.status = INITIALIZED
+                    db.add(text)
+            db.commit()
+        return deleted
 
     def get_annotation_stats(self, db: Session, text_id: Optional[int] = None) -> dict:
         """Get annotation statistics."""

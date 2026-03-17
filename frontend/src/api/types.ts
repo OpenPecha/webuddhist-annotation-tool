@@ -156,6 +156,31 @@ export interface DeleteMyAnnotationsResponse {
   deleted_count: number;
 }
 
+export interface BulkCreateAnnotationsRequest {
+  text_id: number;
+  annotation_type: string;
+  label?: string | null;
+  name?: string | null;
+  level?: "minor" | "major" | "critical" | null;
+  selected_text: string;
+  spans: Array<{ start_position: number; end_position: number }>;
+}
+
+export interface BulkCreateAnnotationsResponse {
+  created_count: number;
+}
+
+export interface BulkDeleteByCriteriaRequest {
+  text_id: number;
+  annotation_type: string;
+  label?: string | null;
+  selected_text: string;
+}
+
+export interface BulkDeleteAnnotationsResponse {
+  deleted_count: number;
+}
+
 // User-related types
 export const UserRole = {
   USER: "user",

@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, validator
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from datetime import datetime
 
 
@@ -94,6 +94,37 @@ class ValidatePositionsRequest(BaseModel):
     text_id: int
     start_position: int
     end_position: int
+
+
+class SpanPosition(BaseModel):
+    """A single span (start, end) for bulk operations."""
+    start_position: int
+    end_position: int
+
+
+class BulkCreateAnnotationsRequest(BaseModel):
+    """Request body for POST /annotations/bulk-create (apply to all)."""
+    text_id: int
+    annotation_type: str
+    label: Optional[str] = None
+    name: Optional[str] = None
+    level: Optional[str] = None
+    selected_text: str
+    spans: List[SpanPosition]
+
+    @validator("spans")
+    def validate_spans_not_empty(cls, v):
+        if not v:
+            raise ValueError("At least one span is required")
+        return v
+
+
+class BulkDeleteByCriteriaRequest(BaseModel):
+    """Request body for POST /annotations/bulk-delete (delete from all)."""
+    text_id: int
+    annotation_type: str
+    label: Optional[str] = None
+    selected_text: str
 
 
 class AnnotationResponse(AnnotationBase):

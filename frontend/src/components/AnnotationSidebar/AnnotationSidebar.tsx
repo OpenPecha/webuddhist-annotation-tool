@@ -1,265 +1,285 @@
-import { useRef, useState, useEffect, useCallback } from "react";
-import { List, useDynamicRowHeight, useListRef } from "react-window";
+import { useState, useMemo, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import {
   IoTrash,
+  IoTrashBin,
   IoChevronUp,
   IoChevronDown,
+  IoChevronForward,
   IoLockClosed,
-  IoChatbubbleEllipses,
-  IoCheckmarkCircle,
-  IoCloseCircle,
   IoRepeat,
 } from "react-icons/io5";
-import { getAnnotationDisplayLabel, type Annotation } from "@/utils/annotationConverter";
+import { getAnnotationDisplayLabel, getDisplayLabelForFilter, type Annotation } from "@/utils/annotationConverter";
 import {
   isStructuralAnnotationType,
   getStructuralAnnotationType,
 } from "@/config/structural-annotations";
 import { truncateText } from "@/lib/utils";
 
-const ROW_GAP = 12
-const BASE_ROW_HEIGHT = 140
-const PER_REVIEW_HEIGHT = 56
+/**
+ * Get the line containing the span [start, end] and the highlight range within that line.
+ * Uses \n as line separator.
+ */
+function getLineWithHighlight(
+  fullText: string,
+  start: number,
+  end: number
+): { lineText: string; highlightStart: number; highlightEnd: number } | null {
+  if (!fullText || start < 0 || end > fullText.length) return null;
+  const lines = fullText.split(/\r?\n/);
+  let offset = 0;
+  for (let i = 0; i < lines.length; i++) {
+    const line = lines[i];
+    const lineStart = offset;
+    const lineEnd = offset + line.length;
+    if (start < lineEnd) {
+      const highlightStart = Math.max(0, start - lineStart);
+      const highlightEnd = Math.min(line.length, end - lineStart);
+      return { lineText: line, highlightStart, highlightEnd };
+    }
+    offset = lineEnd + (i < lines.length - 1 ? 1 : 0);
+  }
+  return null;
+}
+
+/** Group key: same type/label + same text = one group */
+function getGroupKey(ann: Annotation): string {
+  return `${getDisplayLabelForFilter(ann)}|${ann.text}`;
+}
+
+export interface AnnotationGroup {
+  groupKey: string;
+  items: Annotation[];
+}
+
+function groupAnnotations(annotations: Annotation[]): AnnotationGroup[] {
+  const map = new Map<string, Annotation[]>();
+  for (const ann of annotations) {
+    const key = getGroupKey(ann);
+    if (!map.has(key)) map.set(key, []);
+    map.get(key)!.push(ann);
+  }
+  return Array.from(map.entries())
+    .map(([groupKey, items]) => ({ groupKey, items }))
+    .sort((a, b) => (a.items[0]?.start ?? 0) - (b.items[0]?.start ?? 0));
+}
 
 interface AnnotationSidebarProps {
   annotations: Annotation[];
+  fullText?: string;
+  isBulkOperationPending?: boolean;
   onRemoveAnnotation: (id: string) => void;
   onAnnotationClick?: (annotation: Annotation) => void;
   onApplyToAll?: (annotation: Annotation) => void;
+  onRemoveFromAll?: (annotation: Annotation) => void;
   isOpen: boolean;
   onToggle: () => void;
 }
 
-interface AnnotationRowProps {
-  annotation: Annotation;
-  style: React.CSSProperties;
-  ariaAttributes?: { role: "listitem"; "aria-posinset": number; "aria-setsize": number };
-  index?: number;
-  onScrollIntoView?: (index: number) => void;
+interface GroupHeaderProps {
+  group: AnnotationGroup;
+  isExpanded: boolean;
+  onToggleExpand: () => void;
+  isBulkOperationPending?: boolean;
   getAnnotationColor: (level?: string, type?: string) => string;
   getAnnotationStyle: (annotation: Annotation) => React.CSSProperties;
-  onAnnotationClick?: (annotation: Annotation) => void;
-  onRemoveAnnotation: (id: string) => void;
   onApplyToAll?: (annotation: Annotation) => void;
+  onRemoveFromAll?: (annotation: Annotation) => void;
 }
 
-interface ListRowProps {
-  annotations: Annotation[];
-  onScrollRowIntoView: (index: number) => void;
-  onAnnotationClick?: (annotation: Annotation) => void;
-  getAnnotationColor: (level?: string, type?: string) => string;
-  getAnnotationStyle: (annotation: Annotation) => React.CSSProperties;
-  onRemoveAnnotation: (id: string) => void;
-  onApplyToAll?: (annotation: Annotation) => void;
-}
+function GroupHeader({
+  group,
+  isExpanded,
+  onToggleExpand,
+  isBulkOperationPending,
+  getAnnotationColor,
+  getAnnotationStyle,
+  onApplyToAll,
+  onRemoveFromAll,
+}: GroupHeaderProps) {
+  const first = group.items[0];
+  if (!first) return null;
+  const hasAgreed = group.items.some((a) => a.is_agreed);
+  const canModify = !hasAgreed;
 
-function AnnotationListRow(
-  props: {
-    index: number;
-    style: React.CSSProperties;
-    ariaAttributes: { role: "listitem"; "aria-posinset": number; "aria-setsize": number };
-  } & ListRowProps
-) {
-  const { index, style, ariaAttributes, annotations, onScrollRowIntoView, onAnnotationClick, getAnnotationColor, getAnnotationStyle, onRemoveAnnotation, onApplyToAll } = props;
-  const annotation = annotations[index];
-  if (!annotation) return null;
   return (
-    <AnnotationRow
-      annotation={annotation}
-      style={style}
-      ariaAttributes={ariaAttributes}
-      index={index}
-      onScrollIntoView={onScrollRowIntoView}
-      onAnnotationClick={onAnnotationClick}
-      getAnnotationColor={getAnnotationColor}
-      getAnnotationStyle={getAnnotationStyle}
-      onRemoveAnnotation={onRemoveAnnotation}
-      onApplyToAll={onApplyToAll}
-    />
+    <div className="flex items-center gap-2 p-3 rounded-lg border border-gray-200 bg-gray-50/80 hover:bg-gray-100/80 transition-colors">
+      <button
+        type="button"
+        className="flex-1 min-w-0 flex items-center gap-2 flex-wrap text-left"
+        onClick={onToggleExpand}
+        aria-expanded={isExpanded}
+        aria-label={isExpanded ? "Collapse group" : "Expand group"}
+      >
+        <IoChevronForward
+          className={`h-4 w-4 text-gray-600 transition-transform flex-shrink-0 ${isExpanded ? "rotate-90" : ""}`}
+        />
+        <Badge
+          variant="secondary"
+          className={`text-xs font-medium ${getAnnotationColor(first.level, first.type)}`}
+          style={getAnnotationStyle(first)}
+          title={getAnnotationDisplayLabel(first)}
+        >
+          {truncateText(getAnnotationDisplayLabel(first), 20)}
+        </Badge>
+        <span className="text-sm font-monlam text-gray-900 truncate" title={first.text}>
+          "{truncateText(first.text, 25)}"
+        </span>
+        <span className="text-xs text-gray-500 flex-shrink-0">
+          {group.items.length} {group.items.length === 1 ? "position" : "positions"}
+        </span>
+        {hasAgreed && (
+          <span className="flex items-center gap-0.5 text-xs text-green-600 flex-shrink-0">
+            <IoLockClosed className="h-3 w-3" /> Agreed
+          </span>
+        )}
+      </button>
+      {canModify && (onApplyToAll != null || onRemoveFromAll != null) && (
+        <div className="flex items-center gap-0.5 flex-shrink-0 relative">
+          {isBulkOperationPending && (
+            <span
+              className="absolute inset-0 flex items-center justify-center bg-white/80 rounded z-10"
+              aria-hidden
+            >
+              <span className="animate-spin inline-block h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full" />
+            </span>
+          )}
+          {onApplyToAll && (
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onApplyToAll(first);
+              }}
+              disabled={isBulkOperationPending}
+              className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              title="Apply to all occurrences"
+            >
+              <IoRepeat className="h-3.5 w-3.5" />
+            </Button>
+          )}
+          {onRemoveFromAll && (
+            <Button
+              variant="ghost"
+              size="sm"
+              type="button"
+              onClick={(e) => {
+                e.stopPropagation();
+                onRemoveFromAll(first);
+              }}
+              disabled={isBulkOperationPending}
+              className="h-7 w-7 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+              title="Remove from all occurrences"
+            >
+              <IoTrashBin className="h-3.5 w-3.5" />
+            </Button>
+          )}
+        </div>
+      )}
+    </div>
   );
 }
 
-function AnnotationRow({
+interface PositionRowProps {
+  annotation: Annotation;
+  fullText?: string;
+  onAnnotationClick?: (annotation: Annotation) => void;
+  onRemoveAnnotation: (id: string) => void;
+  isAgreed: boolean;
+}
+
+function PositionRow({
   annotation,
-  style,
-  ariaAttributes,
-  index,
-  onScrollIntoView,
-  getAnnotationColor,
-  getAnnotationStyle,
+  fullText,
   onAnnotationClick,
   onRemoveAnnotation,
-  onApplyToAll,
-}: AnnotationRowProps) {
-  const handleClick = (e: React.MouseEvent) => {
-    e.stopPropagation();
-    onAnnotationClick?.(annotation);
-  };
-  return (
-    <div style={style} className="pb-3" {...ariaAttributes}>
-      <div
-        className={`p-3 rounded-lg border transition-all duration-200 bg-white group cursor-pointer ${
-          annotation.is_agreed
-            ? "border-green-200 bg-green-50/50 hover:bg-green-100/50"
-            : "border-gray-200 hover:border-gray-300 hover:bg-gray-50"
-        }`}
-        onClick={handleClick}
-        onMouseDown={(e) => e.stopPropagation()}
-        title={onAnnotationClick != null ? "Click to navigate to this annotation in the editor" : "Click to scroll into view"}
-      >
-        <div className="flex items-start justify-between gap-2 mb-2">
-          <div className="flex items-center gap-2">
-            <Badge
-              variant="secondary"
-              className={`text-xs font-medium ${getAnnotationColor(
-                annotation.level,
-                annotation.type
-              )}`}
-              style={getAnnotationStyle(annotation)}
-              title={getAnnotationDisplayLabel(annotation)}
-            >
-              {truncateText(getAnnotationDisplayLabel(annotation), 30)}
-            </Badge>
-            {annotation.level && (
-              <Badge
-                variant="outline"
-                className={`text-xs font-medium ${
-                  annotation.level === "critical"
-                    ? "border-red-300 text-red-700 bg-red-50"
-                    : annotation.level === "major"
-                    ? "border-yellow-300 text-yellow-700 bg-yellow-50"
-                    : "border-green-300 text-green-700 bg-green-50"
-                }`}
-              >
-                {annotation.level === "critical"
-                  ? "🔴"
-                  : annotation.level === "major"
-                  ? "🟡"
-                  : "🟢"}{" "}
-                {annotation.level}
-              </Badge>
-            )}
-            {annotation.is_agreed && (
-              <div className="flex items-center gap-1 text-green-600">
-                <IoLockClosed className="h-3 w-3" />
-                <span className="text-xs font-medium">Agreed</span>
-              </div>
-            )}
-          </div>
-          {annotation.is_agreed ? (
-            <div className="h-6 w-6 flex items-center justify-center">
-              <IoLockClosed className="h-3 w-3 text-green-600" />
-            </div>
-          ) : (
-            <div className="flex items-center gap-0.5 opacity-0 group-hover:opacity-100 transition-opacity duration-200">
-              {onApplyToAll && (
-                <Button
-                  variant="ghost"
-                  size="sm"
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    onApplyToAll(annotation);
-                  }}
-                  className="h-6 w-6 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
-                  title="Apply to all occurrences of this text"
-                >
-                  <IoRepeat className="h-3 w-3" />
-                </Button>
-              )}
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={(e) => {
-                  e.stopPropagation();
-                  onRemoveAnnotation(annotation.id);
-                }}
-                className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50"
-              >
-                <IoTrash className="h-3 w-3" />
-              </Button>
-            </div>
-          )}
-        </div>
-        <p className="text-sm font-monlam leading-[normal] text-gray-900 font-medium mb-1 break-words">
-          "{truncateText(annotation.text, 30)}"
-        </p>
-        {annotation.reviews && annotation.reviews.length > 0 && (
-          <div className="mt-2 space-y-2">
-            <div className="flex items-center gap-1 text-xs text-gray-500">
-              <IoChatbubbleEllipses className="h-3 w-3" />
-              <span>Reviewer Comments:</span>
-            </div>
-            {annotation.reviews.map((review: { id: number; decision: "agree" | "disagree"; comment?: string; created_at: string }) => (
-              <div
-                key={review.id}
-                className={`p-2 rounded border text-xs ${
-                  review.decision === "agree"
-                    ? "bg-green-50 border-green-200"
-                    : "bg-red-50 border-red-200"
-                }`}
-              >
-                <div className="flex items-center gap-1 mb-1">
-                  {review.decision === "agree" ? (
-                    <IoCheckmarkCircle className="h-3 w-3 text-green-600" />
-                  ) : (
-                    <IoCloseCircle className="h-3 w-3 text-red-600" />
-                  )}
-                  <span
-                    className={`font-medium ${
-                      review.decision === "agree"
-                        ? "text-green-700"
-                        : "text-red-700"
-                    }`}
-                  >
-                    {review.decision === "agree" ? "Agreed" : "Disagreed"}
-                  </span>
-                  <span className="text-gray-500 ml-auto">
-                    {new Date(review.created_at).toLocaleDateString()}
-                  </span>
-                </div>
-                {review.comment && (
-                  <p className="text-gray-700 italic">"{review.comment}"</p>
-                )}
-              </div>
-            ))}
-          </div>
+  isAgreed,
+}: PositionRowProps) {
+  const lineWithHighlight =
+    fullText != null
+      ? getLineWithHighlight(fullText, annotation.start, annotation.end)
+      : null;
+
+  const content =
+    lineWithHighlight != null ? (
+      <span className="text-xs font-monlam text-gray-800 break-words leading-relaxed">
+        {lineWithHighlight.highlightStart > 0 && (
+          <span>{lineWithHighlight.lineText.slice(0, lineWithHighlight.highlightStart)}</span>
         )}
-        <p className="text-xs text-gray-500 mt-2">
-          Position {annotation.start}-{annotation.end}
-          {annotation.is_agreed && (
-            <span className="ml-2 text-green-600">• Locked by reviewer</span>
+        <mark className="bg-yellow-200 px-0.5 rounded font-medium">
+          {lineWithHighlight.lineText.slice(
+            lineWithHighlight.highlightStart,
+            lineWithHighlight.highlightEnd
           )}
-        </p>
-      </div>
+        </mark>
+        {lineWithHighlight.highlightEnd < lineWithHighlight.lineText.length && (
+          <span>
+            {lineWithHighlight.lineText.slice(lineWithHighlight.highlightEnd)}
+          </span>
+        )}
+      </span>
+    ) : (
+      <span className="text-xs font-medium text-gray-700 font-mono">
+        Position {annotation.start}–{annotation.end}
+      </span>
+    );
+
+  return (
+    <div className="flex items-center justify-between gap-2 pl-8 pr-2 py-1.5 rounded border border-transparent hover:border-gray-200 hover:bg-white group/row transition-colors">
+      <button
+        type="button"
+        className="flex-1 flex items-center justify-between gap-2 text-left min-w-0"
+        onClick={() => onAnnotationClick?.(annotation)}
+        title="Click to scroll to this position in the editor"
+      >
+        {content}
+      </button>
+      {!isAgreed && (
+        <Button
+          variant="ghost"
+          size="sm"
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onRemoveAnnotation(annotation.id);
+          }}
+          className="h-6 w-6 p-0 text-red-500 hover:text-red-700 hover:bg-red-50 opacity-0 group-hover/row:opacity-100 transition-opacity flex-shrink-0"
+          title="Remove this occurrence only"
+        >
+          <IoTrash className="h-3 w-3" />
+        </Button>
+      )}
     </div>
-  )
+  );
 }
 
 export const AnnotationSidebar = ({
   annotations,
+  fullText,
+  isBulkOperationPending = false,
   onRemoveAnnotation,
   onAnnotationClick,
   onApplyToAll,
+  onRemoveFromAll,
   isOpen,
   onToggle,
 }: AnnotationSidebarProps) => {
-  const listRef = useRef<HTMLDivElement>(null);
-  const [listSize, setListSize] = useState({ width: 0, height: 0 });
+  const [expandedGroups, setExpandedGroups] = useState<Set<string>>(new Set());
 
-  useEffect(() => {
-    const el = listRef.current;
-    if (!el) return;
-    const updateSize = () => {
-      setListSize({ width: el.clientWidth, height: el.clientHeight });
-    };
-    updateSize();
-    const ro = new ResizeObserver(updateSize);
-    ro.observe(el);
-    return () => ro.disconnect();
-  }, [isOpen]);
+  const grouped = useMemo(() => groupAnnotations(annotations), [annotations]);
+
+  const toggleGroup = useCallback((groupKey: string) => {
+    setExpandedGroups((prev) => {
+      const next = new Set(prev);
+      if (next.has(groupKey)) next.delete(groupKey);
+      else next.add(groupKey);
+      return next;
+    });
+  }, []);
 
   const getAnnotationColor = useCallback((level?: string, type?: string) => {
     if (type && isStructuralAnnotationType(type)) {
@@ -292,94 +312,108 @@ export const AnnotationSidebar = ({
     return {};
   }, []);
 
-  const listApiRef = useListRef(null);
-
-  const scrollRowIntoView = useCallback((index: number) => {
-    listApiRef.current?.scrollToRow({ index, behavior: "smooth", align: "center" });
-  }, [listApiRef]);
-
-  
-  const rowHeight = useDynamicRowHeight({
-    defaultRowHeight: 50
-  });
-  const rowProps: ListRowProps = {
-    annotations,
-    onScrollRowIntoView: scrollRowIntoView,
-    onAnnotationClick,
-    getAnnotationColor,
-    getAnnotationStyle,
-    onRemoveAnnotation,
-    onApplyToAll,
-  };
-
   return (
     <div
       className={`flex flex-col mt-4 mb-4 transition-all duration-300 ${
         isOpen ? "h-[75vh]" : "h-auto"
       } w-full`}
     >
-      {annotations.length > 0 && <Card
-        className={`flex flex-col transition-all duration-300 ${
-          isOpen ? "h-full" : "h-auto"
-        }`}
-      >
-        {isOpen ? (
-          // Expanded state
-          <>
-            <CardHeader
-              className="px-4 cursor-pointer hover:bg-gray-50 transition-colors duration-200 flex-shrink-0"
-              onClick={onToggle}
-            >
-              <CardTitle className="text-sm font-medium text-gray-900 flex items-center justify-between">
-                <span>Annotations ({annotations.length})</span>
-                <div className="flex items-center space-x-2">
-                  <Badge variant="secondary" className="text-xs">
-                    {annotations.length}
-                  </Badge>
-                  <IoChevronUp className="h-4 w-4" />
-                </div>
-              </CardTitle>
-            </CardHeader>
-            <div className="flex-1 min-h-0 flex flex-col">
-              <CardContent className="pt-0 flex-1 min-h-0">
-                {annotations.length === 0 ? (
-                  <p className="text-sm text-gray-500 italic text-center py-8">
-                    No annotations yet. Select text to add annotations.
-                  </p>
-                ) : (
-                  <div ref={listRef} className="h-full min-h-0">
-                    {listSize.height > 0 && (
-                      <List<ListRowProps>
-                        listRef={listApiRef}
-                        rowComponent={AnnotationListRow}
-                        rowCount={annotations.length}
-                        rowHeight={rowHeight}
-                        rowProps={rowProps}
-                        style={{ height: listSize.height, width: listSize.width }}
-                        overscanCount={5}
+      {annotations.length > 0 && (
+        <Card
+          className={`flex flex-col transition-all duration-300 ${
+            isOpen ? "h-full" : "h-auto"
+          }`}
+        >
+          {isOpen ? (
+            <>
+              <CardHeader
+                className="px-4 cursor-pointer hover:bg-gray-50 transition-colors duration-200 flex-shrink-0"
+                onClick={onToggle}
+              >
+                <CardTitle className="text-sm font-medium text-gray-900 flex items-center justify-between">
+                  <span>Annotations ({annotations.length})</span>
+                  <div className="flex items-center space-x-2">
+                    <Badge variant="secondary" className="text-xs">
+                      {grouped.length} groups
+                    </Badge>
+                    <IoChevronUp className="h-4 w-4" />
+                  </div>
+                </CardTitle>
+              </CardHeader>
+              <div className="flex-1 min-h-0 flex flex-col relative">
+                {isBulkOperationPending && (
+                  <div
+                    className="absolute inset-0 flex items-center justify-center bg-white/90 z-20 rounded-b-lg"
+                    aria-live="polite"
+                    aria-busy="true"
+                  >
+                    <div className="flex flex-col items-center gap-3">
+                      <span
+                        className="animate-spin inline-block h-8 w-8 border-2 border-blue-500 border-t-transparent rounded-full"
+                        aria-hidden
                       />
-                    )}
+                      <span className="text-sm font-medium text-gray-700">
+                        Applying changes...
+                      </span>
+                    </div>
                   </div>
                 )}
-              </CardContent>
+                <CardContent className="pt-0 flex-1 min-h-0 overflow-hidden flex flex-col">
+                  {grouped.length === 0 ? (
+                    <p className="text-sm text-gray-500 italic text-center py-8">
+                      No annotations yet. Select text to add annotations.
+                    </p>
+                  ) : (
+                    <div className="overflow-y-auto flex-1 min-h-0 space-y-2 pr-1">
+                      {grouped.map((group) => (
+                        <div key={group.groupKey} className="space-y-0.5">
+                          <GroupHeader
+                            group={group}
+                            isExpanded={expandedGroups.has(group.groupKey)}
+                            onToggleExpand={() => toggleGroup(group.groupKey)}
+                            isBulkOperationPending={isBulkOperationPending}
+                            getAnnotationColor={getAnnotationColor}
+                            getAnnotationStyle={getAnnotationStyle}
+                            onApplyToAll={onApplyToAll}
+                            onRemoveFromAll={onRemoveFromAll}
+                          />
+                          {expandedGroups.has(group.groupKey) && (
+                            <div className="space-y-0.5 pt-0.5">
+                              {group.items.map((ann) => (
+                                <PositionRow
+                                  key={ann.id}
+                                  annotation={ann}
+                                  fullText={fullText}
+                                  onAnnotationClick={onAnnotationClick}
+                                  onRemoveAnnotation={onRemoveAnnotation}
+                                  isAgreed={!!ann.is_agreed}
+                                />
+                              ))}
+                            </div>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </CardContent>
+              </div>
+            </>
+          ) : (
+            <div className="px-4 py-2 flex items-center justify-between">
+              <span className="text-sm font-medium text-gray-700">
+                Annotations ({annotations.length})
+              </span>
+              <button
+                onClick={onToggle}
+                className="h-6 w-6 p-0 hover:bg-blue-50 rounded transition-all duration-200 flex items-center justify-center"
+                title="Expand Annotations"
+              >
+                <IoChevronDown className="h-4 w-4 text-blue-600" />
+              </button>
             </div>
-          </>
-        ) : (
-          // Collapsed state
-          <div className="px-4 py-2 flex items-center justify-between">
-            <span className="text-sm font-medium text-gray-700">
-              Annotations ({annotations.length})
-            </span>
-            <button
-              onClick={onToggle}
-              className="h-6 w-6 p-0 hover:bg-blue-50 rounded transition-all duration-200 flex items-center justify-center"
-              title="Expand Annotations"
-            >
-              <IoChevronDown className="h-4 w-4 text-blue-600" />
-            </button>
-          </div>
-        )}
-      </Card>}
+          )}
+        </Card>
+      )}
     </div>
   );
 };

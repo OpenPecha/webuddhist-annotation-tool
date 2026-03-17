@@ -8,6 +8,10 @@ import type {
   ValidatePositionsRequest,
   ValidatePositionsResponse,
   DeleteMyAnnotationsResponse,
+  BulkCreateAnnotationsRequest,
+  BulkCreateAnnotationsResponse,
+  BulkDeleteByCriteriaRequest,
+  BulkDeleteAnnotationsResponse,
 } from "./types";
 
 // Annotations API client
@@ -88,6 +92,26 @@ export const annotationsApi = {
   ): Promise<ValidatePositionsResponse> => {
     return apiClient.post<ValidatePositionsResponse>(
       "/annotations/validate-positions",
+      data
+    );
+  },
+
+  // Bulk create (apply to all)
+  bulkCreateAnnotations: async (
+    data: BulkCreateAnnotationsRequest
+  ): Promise<BulkCreateAnnotationsResponse> => {
+    return apiClient.post<BulkCreateAnnotationsResponse>(
+      "/annotations/bulk-create",
+      data
+    );
+  },
+
+  // Bulk delete (delete from all)
+  bulkDeleteAnnotations: async (
+    data: BulkDeleteByCriteriaRequest
+  ): Promise<BulkDeleteAnnotationsResponse> => {
+    return apiClient.post<BulkDeleteAnnotationsResponse>(
+      "/annotations/bulk-delete",
       data
     );
   },

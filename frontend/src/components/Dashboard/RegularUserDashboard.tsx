@@ -15,7 +15,7 @@ import {
   useStartReviewing,
   useCurrentUser,
 } from "@/hooks";
-import { CalendarIcon } from "lucide-react";
+import { CalendarIcon, ListTodo } from "lucide-react";
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString("en-US", {
@@ -90,7 +90,7 @@ export const RegularUserDashboard: React.FC = () => {
   const startReviewingMutation = useStartReviewing();
 
   // Fetch user's work in progress
-  const { data: workInProgress = [] } = useMyWorkInProgress();
+  const { data: workInProgress = [], isLoading: isLoadingWorkInProgress } = useMyWorkInProgress();
 
   // Fetch recent activity data from API
   const { data: recentActivity = [], isLoading: isLoadingActivity } = useRecentActivity(10);
@@ -214,66 +214,14 @@ export const RegularUserDashboard: React.FC = () => {
         {/* Header */}
         <div className="p-6 border-b border-gray-200">
           <h1 className="text-xl font-semibold text-gray-900">
-            Welcome, {currentUser?.name}
+            Welcome, {currentUser?.full_name}
           </h1>
-          <p className="text-sm text-gray-600 mt-1">
-            Annotation Dashboard
-          </p>
+        
         </div>
 
         {/* Action Buttons */}
         <div className="flex-1 p-6 space-y-4">
-          {/* Start Work Button - Hide from reviewers */}
-          {(currentUser?.role == "annotator" || currentUser?.role == "user") && (
-            <div className="space-y-3">
-              <Button
-                size="lg"
-                className="w-full h-12 text-base font-medium"
-                onClick={handleStartWork}
-                disabled={isLoadingText}
-              >
-                {isLoadingText ? (
-                  <>
-                    <AiOutlineLoading3Quarters className="w-4 h-4 mr-2 animate-spin" />
-                    Finding Text...
-                  </>
-                ) : (
-                  <>
-                    <StartWorkIcon />
-                    <span className="ml-2">Start Work</span>
-                  </>
-                )}
-              </Button>
-              
-              {/* Work in Progress */}
-              {workInProgress.length > 0 && (
-                <div className="bg-blue-50 p-4 rounded-lg">
-                  <h3 className="font-medium text-sm text-gray-900 mb-2">Work in Progress</h3>
-                  {workInProgress.map((text) => (
-                    <div
-                      key={text.id}
-                      className="bg-white p-3 rounded border mb-2 last:mb-0"
-                    >
-                      <p className="font-medium text-sm text-gray-900">
-                        {text.title}
-                      </p>
-                      <p className="text-xs text-gray-500">
-                        Status: {text.status} • Started:{" "}
-                        {formatDate(text.updated_at || text.created_at)}
-                      </p>
-                      <Button
-                        size="sm"
-                        className="w-full mt-2"
-                        onClick={() => navigate(`/task/${text.id}`)}
-                      >
-                        Continue
-                      </Button>
-                    </div>
-                  ))}
-                </div>
-              )}
-            </div>
-          )}
+         
 
           {/* Review Work Button - Show for reviewers or admins */}
           {(currentUser?.role === "reviewer" || currentUser?.role === "admin") && (
@@ -324,51 +272,59 @@ export const RegularUserDashboard: React.FC = () => {
       {/* Main Content Area */}
       <div className="flex-1 overflow-auto md:ml-0 ml-0">
         <div className="p-4 md:p-8 pt-20 md:pt-8">
-          {/* Review Progress Section - Show for reviewers and admins */}
-        
-
-          {/* Recent Activity Section - Hide from reviewers */}
-          {currentUser?.role !== "reviewer" && (
+          {/* My Tasks Section - Show for annotators and users (same as Start Work / Load) */}
+          {(currentUser?.role === "annotator" || currentUser?.role === "user") && (
             <div className="mb-8">
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-1">
-                  <RecentActivityIcon />
-                  <h2 className="text-lg font-semibold text-gray-900">Recent Activity</h2>
+                  <ListTodo className="w-5 h-5 text-gray-500" />
+                  <h2 className="text-lg font-semibold text-gray-900">My Tasks</h2>
                 </div>
                 <p className="text-sm text-gray-600">
-                  Your recent work and contributions
+                  Texts you are currently working on
                 </p>
               </div>
-              
-              {isLoadingActivity && (
-                <div className="text-center py-8">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4"></div>
-                  <p className="text-gray-500">Loading recent activity...</p>
+              {isLoadingWorkInProgress && (
+                <div className="text-center py-6">
+                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4" />
+                  <p className="text-gray-500">Loading tasks...</p>
                 </div>
               )}
-              {recentActivity.length > 0 ? (
+              {!isLoadingWorkInProgress && workInProgress.length > 0 && (
                 <div className="space-y-3">
-                  {recentActivity.map((activity) => {
-                    const activityType = getActivityType(activity);
-                    return (
-                      <RecentActivityItem
-                        key={activity.text.id}
-                        activity={activity}
-                        activityType={activityType}
-                      />
-                    );
-                  })}
+                  {workInProgress.map((text) => (
+                    <div
+                      key={text.id}
+                      className="flex w-full items-center justify-between px-4 py-3 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-gray-900 truncate">{text.title}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
+                          Status: {text.status} • {formatDate(text.updated_at || text.created_at)}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="ml-4 shrink-0"
+                        onClick={() => navigate(`/task/${text.id}`)}
+                      >
+                        Continue
+                      </Button>
+                    </div>
+                  ))}
                 </div>
-              ) : (
-                <div className="text-center py-8">
-                  <p className="text-gray-500">No recent activity yet.</p>
+              )}
+              {!isLoadingWorkInProgress && workInProgress.length === 0 && (
+                <div className="text-center py-6 border border-dashed border-gray-200 rounded-lg bg-gray-50">
+                  <p className="text-gray-500">No tasks in progress.</p>
                   <p className="text-sm text-gray-400 mt-1">
-                    Start working to see your activity here!
+                    Use <strong>Start Work</strong> or <strong>Load Text</strong> in the sidebar to begin.
                   </p>
                 </div>
               )}
             </div>
           )}
+
 
       
         </div>

@@ -9,6 +9,7 @@ import {
   useDeleteAnnotation,
   useAnnotationTypes,
 } from "@/hooks";
+import { annotationsApi } from "@/api/annotations";
 import {
   extractLeafNodes,
   isValidAnnotationType,
@@ -52,6 +53,8 @@ export const useAnnotationOperations = (
     start: number;
     end: number;
   } | null>(null);
+
+  const [isBulkOperationPending, setBulkOperationPending] = useState(false);
 
   // Mutations
   const createAnnotationMutation = useCreateAnnotation();
@@ -279,29 +282,27 @@ export const useAnnotationOperations = (
     }
 
     const labelValue = annotation.name?.trim() ?? annotation.label ?? annotation.type;
-    const createDataList: AnnotationCreate[] = toCreate.map(({ start, end }) => ({
-      text_id: textIdNumber,
-      annotation_type: annotation.type,
-      start_position: start,
-      end_position: end,
-      selected_text: annotation.text,
-      confidence: 1.0,
-      label: labelValue,
-      name: annotation.name,
-      level: annotation.level as "minor" | "major" | "critical" | undefined,
-      meta: {},
-    }));
 
     toast({
       title: "Applying to all",
       description: `Adding annotation to ${toCreate.length} occurrence(s)...`,
     });
 
+    setBulkOperationPending(true);
     try {
-      await Promise.all(
-        createDataList.map((data) => createAnnotationMutation.mutateAsync(data))
-      );
-      queryClient.invalidateQueries({ queryKey: cacheKey });
+      await annotationsApi.bulkCreateAnnotations({
+        text_id: textIdNumber,
+        annotation_type: annotation.type,
+        label: labelValue ?? undefined,
+        name: annotation.name ?? undefined,
+        level: annotation.level ?? undefined,
+        selected_text: annotation.text,
+        spans: toCreate.map(({ start, end }) => ({
+          start_position: start,
+          end_position: end,
+        })),
+      });
+      await queryClient.refetchQueries({ queryKey: cacheKey });
       const filterKey = getDisplayLabelForFilter(annotation);
       if (filterKey) autoCheckAnnotationType(filterKey);
       toast({
@@ -309,13 +310,15 @@ export const useAnnotationOperations = (
         description: `Applied to ${toCreate.length} occurrence(s).`,
       });
     } catch (error) {
-      queryClient.invalidateQueries({ queryKey: cacheKey });
       toast({
         title: TOAST_MESSAGES.ANNOTATION_CREATE_FAILED,
         description: error instanceof Error ? error.message : "Failed to apply to all occurrences",
       });
+      await queryClient.invalidateQueries({ queryKey: cacheKey });
+    } finally {
+      setBulkOperationPending(false);
     }
-  }, [textId, text, validateAnnotationType, toast, createAnnotationMutation, queryClient, findAllOccurrences, autoCheckAnnotationType]);
+  }, [textId, text, validateAnnotationType, toast, queryClient, findAllOccurrences, autoCheckAnnotationType]);
 
   /**
    * Update annotation in place via PUT (label, name, level).
@@ -481,6 +484,74 @@ export const useAnnotationOperations = (
       },
     });
   }, [textId, toast, deleteAnnotationMutation, queryClient]);
+
+  /**
+   * Removes all annotations that have the same text and same type/label as the given annotation.
+   * Skips annotations that are agreed (locked by reviewer).
+   */
+  const removeAnnotationFromAll = useCallback(async (annotation: Annotation) => {
+    if (!textId) return;
+    const textIdNumber = parseInt(textId, 10);
+    if (isNaN(textIdNumber)) return;
+
+    const cacheKey = queryKeys.texts.withAnnotations(textIdNumber);
+    const current = queryClient.getQueryData<TextWithAnnotations>(cacheKey);
+    const existingApi = current?.annotations ?? [];
+    const targetKey = getDisplayLabelForFilter(annotation);
+    const searchText = annotation.text;
+
+    const toDelete = existingApi.filter(
+      (a) =>
+        getDisplayLabelForFilter(a) === targetKey &&
+        (a.selected_text ?? "") === searchText &&
+        !a.is_agreed
+    );
+    const agreedCount = existingApi.filter(
+      (a) =>
+        getDisplayLabelForFilter(a) === targetKey &&
+        (a.selected_text ?? "") === searchText &&
+        a.is_agreed
+    ).length;
+
+    if (toDelete.length === 0) {
+      toast({
+        title: "Delete from all",
+        description: agreedCount > 0
+          ? "All matching annotations are agreed (locked) and cannot be deleted."
+          : "No matching annotations to delete.",
+      });
+      return;
+    }
+
+    toast({
+      title: "Deleting from all",
+      description: `Removing ${toDelete.length} occurrence(s)...`,
+    });
+
+    setBulkOperationPending(true);
+    try {
+      const { deleted_count } = await annotationsApi.bulkDeleteAnnotations({
+        text_id: textIdNumber,
+        annotation_type: annotation.type,
+        label: annotation.label ?? undefined,
+        selected_text: searchText,
+      });
+      await queryClient.refetchQueries({ queryKey: cacheKey });
+      queryClient.invalidateQueries({ queryKey: queryKeys.annotations.byText(textIdNumber) });
+      toast({
+        title: TOAST_MESSAGES.ANNOTATION_DELETED,
+        description: `Removed from ${deleted_count} occurrence(s).`,
+      });
+    } catch (error) {
+      toast({
+        title: TOAST_MESSAGES.ANNOTATION_DELETE_FAILED,
+        description: error instanceof Error ? error.message : "Failed to delete from all occurrences",
+      });
+      await queryClient.invalidateQueries({ queryKey: cacheKey });
+    } finally {
+      setBulkOperationPending(false);
+    }
+  }, [textId, toast, queryClient]);
 
   /**
    * Handler for header selection (triggers name input)
@@ -704,8 +775,9 @@ export const useAnnotationOperations = (
     // Functions
     addAnnotation,
     applyAnnotationToAll,
-    updateAnnotation,
     removeAnnotation,
+    removeAnnotationFromAll,
+    updateAnnotation,
     handleHeaderSelected,
     handleHeaderNameSubmit,
     handleHeaderNameCancel,
@@ -718,6 +790,7 @@ export const useAnnotationOperations = (
     isCreatingAnnotation: createAnnotationMutation.isPending,
     isDeletingAnnotation: deleteAnnotationMutation.isPending,
     isUpdatingAnnotation: updateAnnotationMutation.isPending,
+    isBulkOperationPending,
   };
 };
 

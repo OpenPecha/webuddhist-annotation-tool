@@ -13,6 +13,8 @@ from schemas.annotation import (
     AnnotationUpdate,
     AnnotationResponse,
     ValidatePositionsRequest,
+    BulkCreateAnnotationsRequest,
+    BulkDeleteByCriteriaRequest,
 )
 
 from controllers import annotations as annotations_controller
@@ -166,3 +168,23 @@ def validate_annotation_positions(
         body.start_position,
         body.end_position,
     )
+
+
+@router.post("/bulk-create")
+def bulk_create_annotations(
+    body: BulkCreateAnnotationsRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Create annotations at all given spans in one request (apply to all)."""
+    return annotations_controller.bulk_create_annotations(db, current_user, body)
+
+
+@router.post("/bulk-delete")
+def bulk_delete_annotations(
+    body: BulkDeleteByCriteriaRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Delete all annotations matching type/label/selected_text for the text (delete from all)."""
+    return annotations_controller.bulk_delete_annotations(db, current_user, body)

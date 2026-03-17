@@ -9,7 +9,12 @@ from crud.annotation import annotation_crud
 from crud.annotation_type import annotation_type_crud
 from crud.text import text_crud
 from models.user import User
-from schemas.annotation import AnnotationCreate, AnnotationUpdate
+from schemas.annotation import (
+    AnnotationCreate,
+    AnnotationUpdate,
+    BulkCreateAnnotationsRequest,
+    BulkDeleteByCriteriaRequest,
+)
 
 # Position-only annotation types (line-break, page-break): ensure type exists in DB on first add
 POSITION_ANNOTATION_TYPES = ("line-break", "page-break")
@@ -232,3 +237,68 @@ def validate_annotation_positions(
         start_pos=start_position,
         end_pos=end_position,
     )
+
+
+def bulk_create_annotations(
+    db: Session, current_user: User, body: BulkCreateAnnotationsRequest
+) -> dict:
+    """Create annotations at all given spans in one request (apply to all). Same permission as create_annotation."""
+    if current_user.role.value not in ("admin", "annotator"):
+        if current_user.role.value == "user":
+            text = text_crud.get(db=db, text_id=body.text_id)
+            if not text:
+                raise HTTPException(
+                    status_code=status.HTTP_404_NOT_FOUND,
+                    detail="Text not found",
+                )
+            if text.uploaded_by != current_user.id:
+                raise HTTPException(
+                    status_code=status.HTTP_403_FORBIDDEN,
+                    detail="You can only annotate texts you uploaded",
+                )
+        else:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail=f"Role '{current_user.role.value}' is not allowed to create annotations",
+            )
+
+    spans_tuples = [(s.start_position, s.end_position) for s in body.spans]
+    created = annotation_crud.create_many(
+        db=db,
+        text_id=body.text_id,
+        annotation_type=body.annotation_type,
+        label=body.label,
+        name=body.name,
+        level=body.level,
+        selected_text=body.selected_text,
+        spans=spans_tuples,
+        annotator_id=current_user.id,
+    )
+    return {"created_count": len(created)}
+
+
+def bulk_delete_annotations(
+    db: Session, current_user: User, body: BulkDeleteByCriteriaRequest
+) -> dict:
+    """Delete all annotations matching criteria (non-agreed, current user's only)."""
+    text = text_crud.get(db=db, text_id=body.text_id)
+    if not text:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Text not found",
+        )
+    if current_user.role.value not in ("admin", "annotator"):
+        if current_user.role.value == "user" and text.uploaded_by != current_user.id:
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="Not enough permissions",
+            )
+    deleted_count = annotation_crud.delete_by_criteria(
+        db=db,
+        text_id=body.text_id,
+        annotation_type=body.annotation_type,
+        label=body.label,
+        selected_text=body.selected_text,
+        annotator_id=current_user.id,
+    )
+    return {"deleted_count": deleted_count}

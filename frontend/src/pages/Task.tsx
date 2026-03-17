@@ -126,6 +126,7 @@ const Index = () => {
   const {
     addAnnotation: addAnnotationFn,
     applyAnnotationToAll,
+    removeAnnotationFromAll,
     updateAnnotation,
     removeAnnotation,
     handleHeaderSelected,
@@ -133,6 +134,7 @@ const Index = () => {
     isCreatingAnnotation,
     isDeletingAnnotation,
     isUpdatingAnnotation,
+    isBulkOperationPending,
   } = useAnnotationOperations(textId, text, currentUserId, annotationList);
 
   /**
@@ -382,9 +384,12 @@ const Index = () => {
           />
           <AnnotationSidebar
             annotations={annotationsWithoutHeader}
+            fullText={text}
+            isBulkOperationPending={isCreatingAnnotation || isDeletingAnnotation || isBulkOperationPending}
             onRemoveAnnotation={removeAnnotation}
             onAnnotationClick={handleAnnotationClick}
             onApplyToAll={applyAnnotationToAll}
+            onRemoveFromAll={removeAnnotationFromAll}
             isOpen={sidebarOpen}
             onToggle={toggleSidebar}
           />
