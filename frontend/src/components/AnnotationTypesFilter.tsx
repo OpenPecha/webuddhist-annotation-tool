@@ -195,14 +195,7 @@ export const AnnotationTypesFilter = ({
                             <IoChevronForward className="w-3.5 h-3.5" />
                           )}
                         </button>
-                        <input
-                          type="checkbox"
-                          id={`filter-type-${typeName}`}
-                          checked={typeFullySelected}
-                          onChange={() => handleTypeCheckboxChange(opts)}
-                          className="w-3.5 h-3.5 text-orange-500 border-gray-300 rounded focus:ring-orange-400 focus:ring-1 cursor-pointer flex-shrink-0"
-                          title={typeFullySelected ? "Hide this annotation type" : "Show this annotation type"}
-                        />
+                     
                         <label
                           htmlFor={`filter-type-${typeName}`}
                           className="flex-1 uppercase text-xs font-semibold text-gray-700 cursor-pointer py-1.5 pr-2 flex items-center justify-between gap-2"
