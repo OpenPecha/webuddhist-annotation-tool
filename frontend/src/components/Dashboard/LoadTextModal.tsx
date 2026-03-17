@@ -165,61 +165,6 @@ export const LoadTextModal: React.FC<LoadTextModalProps> = ({
     );
   };
 
-  // OpenPecha handlers
-  const handleLoadText = () => {
-    if (!selectedText?.id || !selectedInstanceId || !textContent || !selectedAnnotationType) {
-      toast.error("Please select all options", {
-        description: "You must select a text, version, and annotation type",
-      });
-      return;
-    }
-
-    const titleKey = Object.keys(selectedText.title)[0];
-    const title = selectedText.title[titleKey] || "OpenPecha Text";
-    const processedContent = getSegmentedText();
-
-    loadTextMutation.mutate(
-      {
-        title: title,
-        content: processedContent,
-        source: `OpenPecha: ${selectedText.id} | Instance: ${selectedInstanceId}`,
-        language: selectedText.language,
-        annotation_type_id: selectedAnnotationType,
-      },
-      {
-        onSuccess: (createdText) => {
-          toast.success("✅ Text Loaded from OpenPecha", {
-            description: `"${createdText.title}" is ready for annotation`,
-          });
-          onClose();
-          resetOpenPechaSelections();
-          navigate(`/task/${createdText.id}`);
-        },
-        onError: (error) => {
-          toast.error("❌ Failed to load text", {
-            description:
-              error instanceof Error ? error.message : "Please try again",
-          });
-        },
-      }
-    );
-  };
-
-  const formatTitle = (title: Record<string, string>): string => {
-    const keys = Object.keys(title);
-    if (keys.length === 0) return "Untitled";
-    return title[keys[0]];
-  };
-
-  const handleTextChange = (value: string) => {
-    setSelectedText(texts.find((t) => t.id === value) || null);
-    setSelectedInstanceId("");
-  };
-
-  const handleInstanceChange = (value: string) => {
-    setSelectedInstanceId(value);
-  };
-
   const resetOpenPechaSelections = () => {
     setSelectedText(null);
     setSelectedInstanceId("");
@@ -231,19 +176,7 @@ export const LoadTextModal: React.FC<LoadTextModalProps> = ({
     setSelectedAnnotationType("");
   };
 
-  const getSegmentedText = (): string => {
-    if (!textContent) return "";
-    const segments = textContent.annotations.segmentation || [];
-    const baseText = textContent.base || "";
 
-    const previewText = segments.map((seg) => {
-      const { span } = seg;
-      const text = baseText.slice(span.start, span.end);
-      return text;
-    });
-
-    return previewText.join("\n");
-  };
 
   const handleClose = () => {
     if (!loadTextMutation.isPending && !isUploadingFile) {
@@ -252,29 +185,6 @@ export const LoadTextModal: React.FC<LoadTextModalProps> = ({
       onClose();
     }
   };
-
-  // Handle errors for OpenPecha
-  // React.useEffect(() => {
-  //   if (textsError && isOpen) {
-  //     toast.error("Failed to load OpenPecha texts", {
-  //       description:
-  //         textsError instanceof Error
-  //           ? textsError.message
-  //           : "Please try again later",
-  //     });
-  //   }
-  // }, [textsError, isOpen]);
-
-  // React.useEffect(() => {
-  //   if (instancesError && isOpen) {
-  //     toast.error("Failed to load text instances", {
-  //       description:
-  //         instancesError instanceof Error
-  //           ? instancesError.message
-  //           : "Please try again",
-  //     });
-  //   }
-  // }, [instancesError, isOpen]);
 
   React.useEffect(() => {
     if (contentError && isOpen) {

@@ -208,20 +208,46 @@ def _text_from_segmented(body: ET.Element) -> Optional[str]:
     return None
 
 
+def _get_segment_word_counts_from_segmented(body: ET.Element) -> Optional[List[int]]:
+    """Get word counts per <u> from segmented layer for segment boundaries.
+    Returns e.g. [3, 9, 3] meaning first u has 3 words, second has 9, third has 3.
+    Returns None if no segmented div or no u elements.
+    """
+    for div in body.iter(_ns("div")):
+        if div.get("type") == "transcription" and div.get("subtype") == "segmented":
+            u_elements = div.findall(f"./{_ns('u')}")
+            if not u_elements:
+                return None
+            return [len(list(u.iter(_ns("w")))) for u in u_elements]
+    return None
+
+
 def _text_and_annotations_from_annotated(
     body: ET.Element,
+    segment_word_counts: Optional[List[int]] = None,
 ) -> tuple[Optional[str], List[TEIAnnotation]]:
     """Extract text and POS annotations from annotated layer.
 
-    Inserts a newline after each <u> (utterance) so text is separated by segments.
+    Inserts a newline at segment boundaries. If segment_word_counts is provided (from
+    the segmented layer), those boundaries are used; otherwise uses <u> in the annotated layer.
     Annotation start/end positions account for these newlines so span addresses stay correct.
     """
     for div in body.iter(_ns("div")):
         if div.get("type") == "transcription" and div.get("subtype") == "annotated":
-            # Build list of (w, add_newline_after): when <u> exists, add newline after last w of each <u>
+            # Build list of (w, add_newline_after). Prefer segmented layer boundaries when available.
             word_items: List[Tuple[ET.Element, bool]] = []
             u_elements = div.findall(f"./{_ns('u')}")
-            if u_elements:
+            if segment_word_counts is not None and segment_word_counts:
+                # Use segmented layer: newline after word at indices (cumsum - 1) for each segment
+                all_ws = list(div.iter(_ns("w")))
+                segment_end_indices: Set[int] = set()
+                idx = 0
+                for count in segment_word_counts:
+                    idx += count
+                    segment_end_indices.add(idx - 1)
+                for i, w in enumerate(all_ws):
+                    word_items.append((w, i in segment_end_indices))
+            elif u_elements:
                 for u in u_elements:
                     ws = list(u.iter(_ns("w")))
                     for w in ws:
@@ -292,8 +318,11 @@ def parse_tei(content: str, filename: str = "") -> TEIParseResult:
     pos_annotations: List[TEIAnnotation] = []
     editorial_annotations: List[TEIAnnotation] = []
 
+    # Segment boundaries: use segmented layer when present so UI shows that segmentation
+    segment_word_counts = _get_segment_word_counts_from_segmented(body)
+
     # Try annotated layer first (gives content + POS annotations)
-    ann_content, ann_annotations = _text_and_annotations_from_annotated(body)
+    ann_content, ann_annotations = _text_and_annotations_from_annotated(body, segment_word_counts)
     if ann_content:
         content = ann_content
         pos_annotations = ann_annotations
