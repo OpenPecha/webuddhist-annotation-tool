@@ -93,8 +93,6 @@ export const TextAnnotator = forwardRef<TextAnnotatorRef, TextAnnotatorProps>(
     return (
       <div className="flex flex-col h-full">
         {/* Header with Search Bar and Translation Toggle */}
-        <div className="border-b flex items-center justify-between gap-4">
-          <div className="flex-1">
             <SearchComponent
               text={text}
               isVisible={true}
@@ -102,7 +100,6 @@ export const TextAnnotator = forwardRef<TextAnnotatorRef, TextAnnotatorProps>(
               onResultSelect={handleSearchResultSelect}
               textId={textId}
             />
-          </div>
           {hasTranslation && translation && (
             <Button
               variant="outline"
@@ -123,7 +120,6 @@ export const TextAnnotator = forwardRef<TextAnnotatorRef, TextAnnotatorProps>(
               )}
             </Button>
           )}
-        </div>
 
         {/* Content Area */}
         {shouldShowSplitView ? (
@@ -187,7 +183,7 @@ export const TextAnnotator = forwardRef<TextAnnotatorRef, TextAnnotatorProps>(
           </div>
         ) : (
           // Single view: Just the original text (full width)
-          <div className="flex-1 overflow-hidden">
+          <div className="flex flex-1 overflow-hidden">
             <Editor
               ref={editorRef}
               text={textContent}

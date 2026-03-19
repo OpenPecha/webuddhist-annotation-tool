@@ -184,10 +184,10 @@ export const SearchComponent: React.FC<SearchComponentProps> = ({
   if (!isVisible) return null;
 
   return (
-    <div className="w-full bg-white border-b border-gray-200 shadow-sm p-3 z-50">
-   
+    <div className="w-full  bg-white  p-2 rounded-md   shadow-sm z-50">
+
       {/* Main Search Row */}
-      <div className="flex items-center gap-3 mb-2">
+      <div className="flex-1  flex items-center gap-3 ">
         {/* Search Icon and Input */}
         <div className="flex items-center gap-2 flex-1">
           <IoSearch className="w-4 h-4 text-gray-500" />
@@ -198,13 +198,13 @@ export const SearchComponent: React.FC<SearchComponentProps> = ({
             value={searchTerm}
             onChange={(e) => setSearchTerm(e.target.value)}
             onKeyDown={handleKeyDown}
-            className="flex-1 px-3 py-1.5 border border-gray-300 rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+            className="flex-1 px-3 py-1.5  rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-blue-500 focus:border-transparent"
           />
         </div>
 
         {/* Results Summary and Navigation */}
         {searchTerm && (
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-2 mt-2">
             <span className="text-xs text-gray-500 whitespace-nowrap">
               {searchResults.length === 0
                 ? "No results"
@@ -260,7 +260,7 @@ export const SearchComponent: React.FC<SearchComponentProps> = ({
 
       {/* Results List - Only show if there are results and search term */}
       {searchTerm && searchResults.length > 0 && (
-        <div className="max-h-32 overflow-y-auto border border-gray-200 rounded-md bg-gray-50">
+        <div className="max-h-32 mt-2 overflow-y-auto border border-gray-200 rounded-md bg-gray-50">
           {searchResults.map((result) => (
             <div
               key={result.index}
