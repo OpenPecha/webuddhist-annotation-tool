@@ -63,6 +63,7 @@ export type Annotation = {
   name?: string;
   label?: string;
   level?: "minor" | "major" | "critical";
+  created_at?: string;
   annotator_id?: number;
   is_agreed?: boolean;
   reviews?: Array<{
@@ -108,6 +109,7 @@ export const convertApiAnnotations = async (
         level: ann.level,
         annotator_id: ann.annotator_id,
         is_agreed: ann.is_agreed,
+        created_at: ann.created_at,
         reviews: reviews,
       };
     })
@@ -132,6 +134,7 @@ export const convertSingleAnnotation = (ann: AnnotationResponse): Annotation => 
     level: ann.level as "minor" | "major" | "critical" | undefined,
     annotator_id: ann.annotator_id,
     is_agreed: ann.is_agreed,
+    created_at: ann.created_at,
     reviews: [],
   };
 };
@@ -154,6 +157,7 @@ export const convertApiAnnotationsSync = (
     level: ann.level as "minor" | "major" | "critical" | undefined,
     annotator_id: ann.annotator_id,
     is_agreed: ann.is_agreed,
+    created_at: ann.created_at,
     reviews: [],
   }));
 };

@@ -120,9 +120,7 @@ class AnnotationCRUD:
         if annotation_type:
             query = query.filter(Annotation.annotation_type == annotation_type)
         
-        query = query.order_by(
-            func.coalesce(Annotation.updated_at, Annotation.created_at).asc(),
-        )
+        query = query.order_by(Annotation.created_at.desc())
         annotations = query.offset(skip).limit(limit).all()
         
         # Add is_agreed status for each annotation
@@ -132,13 +130,11 @@ class AnnotationCRUD:
         return annotations
 
     def get_by_text(self, db: Session, text_id: int) -> List[Annotation]:
-        """Get all annotations for a specific text, ordered by updated_at descending."""
+        """Get all annotations for a specific text, ordered by created_at descending."""
         annotations = (
             db.query(Annotation)
             .filter(Annotation.text_id == text_id)
-            .order_by(
-                func.coalesce(Annotation.updated_at, Annotation.created_at).desc(),
-            )
+            .order_by(Annotation.created_at.desc())
             .all()
         )
         
@@ -149,13 +145,11 @@ class AnnotationCRUD:
         return annotations
 
     def get_by_annotator(self, db: Session, annotator_id: int, skip: int = 0, limit: int = 100) -> List[Annotation]:
-        """Get annotations by a specific annotator, ordered by updated_at descending."""
+        """Get annotations by a specific annotator, ordered by created_at descending."""
         annotations = (
             db.query(Annotation)
             .filter(Annotation.annotator_id == annotator_id)
-            .order_by(
-                func.coalesce(Annotation.updated_at, Annotation.created_at).desc(),
-            )
+            .order_by(Annotation.created_at.desc())
             .offset(skip)
             .limit(limit)
             .all()
@@ -168,13 +162,11 @@ class AnnotationCRUD:
         return annotations
 
     def get_by_type(self, db: Session, annotation_type: str, skip: int = 0, limit: int = 100) -> List[Annotation]:
-        """Get annotations by type, ordered by updated_at descending."""
+        """Get annotations by type, ordered by created_at descending."""
         annotations = (
             db.query(Annotation)
             .filter(Annotation.annotation_type == annotation_type)
-            .order_by(
-                func.coalesce(Annotation.updated_at, Annotation.created_at).desc(),
-            )
+            .order_by(Annotation.created_at.desc())
             .offset(skip)
             .limit(limit)
             .all()
