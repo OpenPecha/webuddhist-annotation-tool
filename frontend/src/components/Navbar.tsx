@@ -9,23 +9,24 @@ interface NavbarProps {
 
 const Navbar = ({ textTitle }: NavbarProps) => {
   const { login, isAuthenticated } = useAuth();
+
   return (
-    <nav className=" z-50 bg-white border-b border-gray-200 px-6 py-2 flex justify-between items-center">
+    <nav className="relative z-50 bg-card/90 backdrop-blur-md border-b border-border px-6 py-3 flex justify-between items-center">
       <div className="flex gap-2">
         <Link
           to="/"
-          className="flex items-center gap-3 font-semibold text-gray-500 hover:text-gray-700 transition capitalize"
+          className="flex items-center gap-3 font-display font-semibold text-foreground hover:text-primary transition-colors"
         >
           <img
             alt="icon"
-            src={'/favicon-32x32.png'}
+            src="/favicon-32x32.png"
             width={40}
-            className=" object-contain"
+            className="object-contain"
           />
           <div className="flex flex-col">
-            <span className="text-2xl font-bold">Text Annotator</span>
+            <span className="text-xl font-semibold">Text Annotator</span>
             {textTitle && (
-              <span className="text-sm font-normal text-gray-600 truncate max-w-md">
+              <span className="text-sm font-normal text-muted-foreground truncate max-w-md">
                 {textTitle}
               </span>
             )}
@@ -36,10 +37,7 @@ const Navbar = ({ textTitle }: NavbarProps) => {
         {isAuthenticated ? (
           <ProfileArea />
         ) : (
-          <Button
-            onClick={() => login(false)}
-            className="px-4 py-2 bg-blue-500 text-white text-sm font-medium rounded-lg shadow hover:bg-blue-600 transition"
-          >
+          <Button variant="default" onClick={() => login(false)}>
             Login
           </Button>
         )}

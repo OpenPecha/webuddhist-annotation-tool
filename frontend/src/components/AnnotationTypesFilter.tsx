@@ -127,7 +127,7 @@ export const AnnotationTypesFilter = ({
   };
 
   return (
-    <div className="mb-3 flex-shrink-0 border border-gray-300 rounded">
+    <div className="mb-3 h-full border bg-white border-gray-300 rounded">
       <button
         onClick={onToggle}
         className="w-full px-3 py-2 flex items-center justify-between bg-gray-50 hover:bg-gray-100 transition-colors rounded"
@@ -143,7 +143,7 @@ export const AnnotationTypesFilter = ({
       </button>
 
       {isOpen && (
-        <div className="p-3 border-t border-gray-300 bg-white">
+        <div className="p-3 border-t border-gray-300 ">
           {loading ? (
             <div className="flex items-center gap-2 py-2">
               <span className="inline-block w-4 h-4 animate-spin rounded-full border-2 border-orange-400 border-t-transparent" />
@@ -175,7 +175,7 @@ export const AnnotationTypesFilter = ({
               </div> */}
 
               {/* Annotation list grouped by annotation type (collapsible, show-only-this-type) */}
-              <div className="max-h-60 overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
+              <div className=" overflow-y-auto space-y-1 scrollbar-thin scrollbar-thumb-gray-300 scrollbar-track-gray-100">
                 {groupedByType.map(([typeName, opts]) => {
                   const isExpanded = expandedTypes.has(typeName);
                   const typeFullySelected = isTypeFullySelected(opts);

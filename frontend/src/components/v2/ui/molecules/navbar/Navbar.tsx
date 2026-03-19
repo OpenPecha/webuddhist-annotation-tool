@@ -1,16 +1,16 @@
-import { Link } from "react-router-dom"
-import { useAuth } from "@/auth/use-auth-hook"
-import { Button } from "@/components/ui/button"
+import { Link } from "react-router-dom";
+import { useAuth } from "@/auth/use-auth-hook";
+import { Button } from "@/components/ui/button";
 
 function Navbar() {
-  const { login, isAuthenticated } = useAuth()
+  const { login, isAuthenticated } = useAuth();
 
   return (
-    <nav className="z-50 bg-white/80 dark:bg-gray-900/80 backdrop-blur-sm border-b border-gray-200 dark:border-gray-800 px-6 py-3 flex justify-between items-center">
+    <nav className="relative z-50 bg-card/80 dark:bg-card/90 backdrop-blur-md border-b border-border px-6 py-3 flex justify-between items-center">
       <div className="flex items-center gap-3">
         <Link
           to="/"
-          className="flex items-center gap-2 font-semibold text-gray-900 dark:text-white hover:text-gray-600 dark:hover:text-gray-300 transition"
+          className="flex items-center gap-2 font-display font-semibold text-foreground hover:text-primary transition-colors"
         >
           <img
             alt="Buddhist AI"
@@ -19,7 +19,7 @@ function Navbar() {
             height={32}
             className="object-contain"
           />
-          <span className="text-xl font-bold">Buddhistai Translation Tool</span>
+          <span className="text-xl">Buddhist AI Annotation Tool</span>
         </Link>
       </div>
       <div className="flex items-center gap-3">
@@ -28,7 +28,7 @@ function Navbar() {
             href="https://buddhistai.tools"
             target="_blank"
             rel="noopener noreferrer"
-            className="text-gray-600 dark:text-gray-400 hover:text-gray-900 dark:hover:text-white"
+            className="text-muted-foreground hover:text-foreground"
           >
             buddhistai.tools
           </a>
@@ -44,7 +44,7 @@ function Navbar() {
         )}
       </div>
     </nav>
-  )
+  );
 }
 
-export default Navbar
+export default Navbar;

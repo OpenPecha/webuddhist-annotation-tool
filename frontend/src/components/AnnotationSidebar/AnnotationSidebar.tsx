@@ -105,7 +105,7 @@ function GroupHeader({
   const canModify = !hasAgreed;
 
   return (
-    <div className="flex items-center gap-2 p-3 rounded-lg border border-gray-200 bg-gray-50/80 hover:bg-gray-100/80 transition-colors">
+    <div className="flex flex-col justify-between items-stretch gap-2 p-3 rounded-lg border border-gray-200 bg-gray-50/80 hover:bg-gray-100/80 transition-colors">
       <button
         type="button"
         className="flex-1 min-w-0 flex items-center gap-2 flex-wrap text-left"
@@ -127,9 +127,7 @@ function GroupHeader({
         <span className="text-sm font-monlam text-gray-900 truncate" title={first.text}>
           "{truncateText(first.text, 25)}"
         </span>
-        <span className="text-xs text-gray-500 flex-shrink-0">
-          {group.items.length} {group.items.length === 1 ? "position" : "positions"}
-        </span>
+      
         {hasAgreed && (
           <span className="flex items-center gap-0.5 text-xs text-green-600 flex-shrink-0">
             <IoLockClosed className="h-3 w-3" /> Agreed
@@ -137,7 +135,10 @@ function GroupHeader({
         )}
       </button>
       {canModify && (onApplyToAll != null || onRemoveFromAll != null) && (
-        <div className="flex items-center gap-0.5 flex-shrink-0 relative">
+        <div className="flex justify-between items-center gap-0.5 flex-shrink-0 relative">
+        <span className="text-xs text-gray-500 flex-shrink-0">
+          {group.items.length}
+        </span>
           {isBulkOperationPending && (
             <span
               className="absolute inset-0 flex items-center justify-center bg-white/80 rounded z-10"
@@ -146,6 +147,7 @@ function GroupHeader({
               <span className="animate-spin inline-block h-4 w-4 border-2 border-blue-500 border-t-transparent rounded-full" />
             </span>
           )}
+          <div className="flex items-center gap-0.5 flex-shrink-0 relative">
           {onApplyToAll && (
             <Button
               variant="ghost"
@@ -156,10 +158,10 @@ function GroupHeader({
                 onApplyToAll(first);
               }}
               disabled={isBulkOperationPending}
-              className="h-7 w-7 p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50"
+              className=" p-0 text-blue-600 hover:text-blue-700 hover:bg-blue-50 cursor-pointer"
               title="Apply to all occurrences"
             >
-              <IoRepeat className="h-3.5 w-3.5" />
+              <IoRepeat className="h-3.5 w-3.5" /> Apply to all
             </Button>
           )}
           {onRemoveFromAll && (
@@ -172,12 +174,13 @@ function GroupHeader({
                 onRemoveFromAll(first);
               }}
               disabled={isBulkOperationPending}
-              className="h-7 w-7 p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50"
+              className="p-0 text-orange-600 hover:text-orange-700 hover:bg-orange-50 cursor-pointer"
               title="Remove from all occurrences"
             >
-              <IoTrashBin className="h-3.5 w-3.5" />
+              <IoTrashBin className="h-3.5 w-3.5" /> 
             </Button>
           )}
+          </div>
         </div>
       )}
     </div>

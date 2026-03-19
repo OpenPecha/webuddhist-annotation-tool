@@ -181,10 +181,10 @@ export const RegularUserDashboard: React.FC = () => {
   };
 
   return (
-    <div className="flex-1 bg-gray-50 flex">
+    <div className="flex-1 bg-background flex">
       {/* Mobile Menu Button */}
       <button
-        className="md:hidden fixed top-16 left-4 z-50 p-2 bg-white rounded-lg shadow-lg border"
+        className="md:hidden fixed top-16 left-4 z-50 p-2 bg-card border border-border rounded-lg shadow-md text-foreground"
         onClick={() => setSidebarOpen(!sidebarOpen)}
         aria-label="Toggle sidebar menu"
       >
@@ -196,27 +196,25 @@ export const RegularUserDashboard: React.FC = () => {
       {/* Mobile Overlay */}
       {sidebarOpen && (
         <button
-          className="md:hidden fixed inset-0 bg-black bg-opacity-50 z-40 w-full h-full"
+          className="md:hidden fixed inset-0 bg-black/40 backdrop-blur-sm z-40 w-full h-full"
           onClick={() => setSidebarOpen(false)}
           onKeyDown={(e) => {
-            if (e.key === 'Escape') {
-              setSidebarOpen(false);
-            }
+            if (e.key === "Escape") setSidebarOpen(false);
           }}
           aria-label="Close sidebar"
         />
       )}
 
       {/* Sidebar */}
-      <div className={`w-80 bg-white border-r border-gray-200 flex flex-col fixed md:relative h-full z-50 transform transition-transform duration-300 ease-in-out ${
-        sidebarOpen ? 'translate-x-0' : '-translate-x-full md:translate-x-0'
-      }`}>
-        {/* Header */}
-        <div className="p-6 border-b border-gray-200">
-          <h1 className="text-xl font-semibold text-gray-900">
+      <div
+        className={`w-80 bg-card border-r border-border flex flex-col fixed md:relative h-full z-50 transform transition-transform duration-300 ease-in-out ${
+          sidebarOpen ? "translate-x-0" : "-translate-x-full md:translate-x-0"
+        }`}
+      >
+        <div className="p-6 border-b border-border">
+          <h1 className="font-display text-xl font-semibold text-foreground">
             Welcome, {currentUser?.full_name}
           </h1>
-        
         </div>
 
         {/* Action Buttons */}
@@ -263,7 +261,12 @@ export const RegularUserDashboard: React.FC = () => {
           {/* Bulk Upload Button - Show for admins only */}
         
           {currentUser?.role === "admin" && (
-      <Link to="/admin" className=" transition-colors">Admin Dashboard</Link>
+            <Link
+              to="/admin"
+              className="text-sm font-medium text-primary hover:underline"
+            >
+              Admin Dashboard
+            </Link>
           )}
 
         </div>
@@ -272,22 +275,23 @@ export const RegularUserDashboard: React.FC = () => {
       {/* Main Content Area */}
       <div className="flex-1 overflow-auto md:ml-0 ml-0">
         <div className="p-4 md:p-8 pt-20 md:pt-8">
-          {/* My Tasks Section - Show for annotators and users (same as Start Work / Load) */}
           {(currentUser?.role === "annotator" || currentUser?.role === "user") && (
             <div className="mb-8">
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-1">
-                  <ListTodo className="w-5 h-5 text-gray-500" />
-                  <h2 className="text-lg font-semibold text-gray-900">My Tasks</h2>
+                  <ListTodo className="w-5 h-5 text-muted-foreground" />
+                  <h2 className="font-display text-lg font-semibold text-foreground">
+                    My Tasks
+                  </h2>
                 </div>
-                <p className="text-sm text-gray-600">
+                <p className="text-sm text-muted-foreground">
                   Texts you are currently working on
                 </p>
               </div>
               {isLoadingWorkInProgress && (
                 <div className="text-center py-6">
-                  <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-blue-500 mx-auto mb-4" />
-                  <p className="text-gray-500">Loading tasks...</p>
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-4" />
+                  <p className="text-muted-foreground">Loading tasks...</p>
                 </div>
               )}
               {!isLoadingWorkInProgress && workInProgress.length > 0 && (
@@ -295,12 +299,15 @@ export const RegularUserDashboard: React.FC = () => {
                   {workInProgress.map((text) => (
                     <div
                       key={text.id}
-                      className="flex w-full items-center justify-between px-4 py-3 border border-gray-200 rounded-lg bg-white hover:bg-gray-50 transition-colors"
+                      className="flex w-full items-center justify-between px-4 py-3 border border-border rounded-lg bg-card hover:bg-accent/50 transition-colors"
                     >
                       <div className="flex-1 min-w-0">
-                        <p className="font-medium text-gray-900 truncate">{text.title}</p>
-                        <p className="text-xs text-gray-500 mt-0.5">
-                          Status: {text.status} • {formatDate(text.updated_at || text.created_at)}
+                        <p className="font-medium text-foreground truncate">
+                          {text.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Status: {text.status} •{" "}
+                          {formatDate(text.updated_at || text.created_at)}
                         </p>
                       </div>
                       <Button
@@ -315,10 +322,11 @@ export const RegularUserDashboard: React.FC = () => {
                 </div>
               )}
               {!isLoadingWorkInProgress && workInProgress.length === 0 && (
-                <div className="text-center py-6 border border-dashed border-gray-200 rounded-lg bg-gray-50">
-                  <p className="text-gray-500">No tasks in progress.</p>
-                  <p className="text-sm text-gray-400 mt-1">
-                    Use <strong>Start Work</strong> or <strong>Load Text</strong> in the sidebar to begin.
+                <div className="text-center py-6 border border-dashed border-border rounded-lg bg-muted/30">
+                  <p className="text-muted-foreground">No tasks in progress.</p>
+                  <p className="text-sm text-muted-foreground mt-1">
+                    Use <strong>Start Work</strong> or <strong>Load Text</strong> in
+                    the sidebar to begin.
                   </p>
                 </div>
               )}
@@ -380,26 +388,24 @@ function RecentActivityItem({
   return (
     <button
       key={activity.text.id}
-      title={buttonText} 
-      className="flex w-full px-2 py-1 items-center justify-between border-b border-gray-100 hover:bg-neutral-200 hover:border-blue-200 hover:shadow-sm transition-all duration-200 cursor-pointer rounded-lg mx-1"
+      title={buttonText}
+      className="flex w-full px-2 py-1 items-center justify-between border-b border-border hover:bg-accent/50 hover:border-primary/20 transition-all duration-200 cursor-pointer rounded-lg mx-1"
       onClick={() => handleActivityClick(activity.text.id)}
     >
       <div className="flex items-center gap-3">
-      
         <div className="flex-1">
-          <p className="font-medium capitalize text-left text-gray-900  transition-colors">
+          <p className="font-medium capitalize text-left text-foreground transition-colors">
             {activity.text.title}
           </p>
-         
           {activity.total_annotations > 0 && (
             <div className="flex items-center gap-2 mt-1">
-              <span className="text-xs bg-green-100 text-green-800 px-2 py-0.5 rounded">
+              <span className="text-xs bg-primary/15 text-primary px-2 py-0.5 rounded">
                 ✓ {activity.accepted_count}
               </span>
-              <span className="text-xs bg-red-100 text-red-800 px-2 py-0.5 rounded">
+              <span className="text-xs bg-destructive/15 text-destructive px-2 py-0.5 rounded">
                 ✗ {activity.rejected_count}
               </span>
-              <span className="text-xs text-gray-500">
+              <span className="text-xs text-muted-foreground">
                 {activity.total_annotations} total
               </span>
             </div>
@@ -407,14 +413,10 @@ function RecentActivityItem({
         </div>
       </div>
       <div className="flex items-center">
-        <span className="text-sm text-gray-500 hover:text-blue-600 transition-colors">
-          <span className="flex items-center gap-1">
-            <CalendarIcon className="w-4 h-4" />
-                      {formatDate(activity.text.updated_at || activity.text.created_at)} •{" "}
-            </span>
-          <p className="text-sm text-gray-500 text-left">
-            {activity.text.status}
-          </p>
+        <span className="text-sm text-muted-foreground hover:text-primary transition-colors flex items-center gap-1">
+          <CalendarIcon className="w-4 h-4" />
+          {formatDate(activity.text.updated_at || activity.text.created_at)} •{" "}
+          <span className="text-left">{activity.text.status}</span>
         </span>
       </div>
     </button>

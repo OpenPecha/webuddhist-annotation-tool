@@ -25,10 +25,10 @@ const Dashboard = () => {
     return <Home/>;
   }
   return (
-    <div className="flex flex-col h-screen">
+    <div className="flex flex-col h-screen bg-background">
       <Navbar />
       <Suspense fallback={<FullScreenLoading />}>
-          <RegularUserDashboard />
+        <RegularUserDashboard />
       </Suspense>
     </div>
   );

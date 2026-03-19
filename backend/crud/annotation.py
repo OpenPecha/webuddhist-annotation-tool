@@ -7,6 +7,23 @@ from models.annotation_review import AnnotationReview
 from schemas.annotation import AnnotationCreate, AnnotationUpdate
 
 
+def _annotation_create_to_obj(obj_in: AnnotationCreate, annotator_id: Optional[int]) -> Annotation:
+    """Build an Annotation ORM object from AnnotationCreate (no DB)."""
+    return Annotation(
+        text_id=obj_in.text_id,
+        annotator_id=annotator_id,
+        annotation_type=obj_in.annotation_type,
+        start_position=obj_in.start_position,
+        end_position=obj_in.end_position,
+        selected_text=obj_in.selected_text,
+        label=obj_in.label,
+        name=obj_in.name,
+        level=obj_in.level,
+        meta=obj_in.meta,
+        confidence=obj_in.confidence or 100,
+    )
+
+
 class AnnotationCRUD:
     def create(self, db: Session, obj_in: AnnotationCreate, annotator_id: int) -> Annotation:
         """Create a new annotation."""
@@ -39,24 +56,32 @@ class AnnotationCRUD:
 
     def create_bulk(self, db: Session, obj_in: AnnotationCreate, annotator_id: Optional[int]) -> Annotation:
         """Create a new annotation without changing text status (for bulk upload)."""
-        db_obj = Annotation(
-            text_id=obj_in.text_id,
-            annotator_id=annotator_id,  # Can be None for system annotations
-            annotation_type=obj_in.annotation_type,
-            start_position=obj_in.start_position,
-            end_position=obj_in.end_position,
-            selected_text=obj_in.selected_text,
-            label=obj_in.label,
-            name=obj_in.name,
-            level=obj_in.level,
-            meta=obj_in.meta,
-            confidence=obj_in.confidence,
-        )
+        db_obj = _annotation_create_to_obj(obj_in, annotator_id)
         db.add(db_obj)
         # Note: No text status update for bulk operations
         db.commit()
         db.refresh(db_obj)
         return db_obj
+
+    def create_many_in_one_commit(
+        self,
+        db: Session,
+        items: List[AnnotationCreate],
+        annotator_id: Optional[int],
+        text_id: Optional[int] = None,
+        set_text_progress: bool = True,
+    ) -> None:
+        """Create many annotations in a single commit. Use for TEI upload to avoid N commits."""
+        if not items:
+            return
+        objs = [_annotation_create_to_obj(obj_in, annotator_id) for obj_in in items]
+        db.add_all(objs)
+        if set_text_progress and text_id is not None:
+            text_obj = db.query(Text).filter(Text.id == text_id).first()
+            if text_obj and text_obj.status == INITIALIZED:
+                text_obj.status = PROGRESS
+                db.add(text_obj)
+        db.commit()
 
     def get(self, db: Session, annotation_id: int) -> Optional[Annotation]:
         """Get annotation by ID."""
@@ -95,6 +120,9 @@ class AnnotationCRUD:
         if annotation_type:
             query = query.filter(Annotation.annotation_type == annotation_type)
         
+        query = query.order_by(
+            func.coalesce(Annotation.updated_at, Annotation.created_at).asc(),
+        )
         annotations = query.offset(skip).limit(limit).all()
         
         # Add is_agreed status for each annotation
@@ -104,8 +132,15 @@ class AnnotationCRUD:
         return annotations
 
     def get_by_text(self, db: Session, text_id: int) -> List[Annotation]:
-        """Get all annotations for a specific text."""
-        annotations = db.query(Annotation).filter(Annotation.text_id == text_id).all()
+        """Get all annotations for a specific text, ordered by updated_at descending."""
+        annotations = (
+            db.query(Annotation)
+            .filter(Annotation.text_id == text_id)
+            .order_by(
+                func.coalesce(Annotation.updated_at, Annotation.created_at).desc(),
+            )
+            .all()
+        )
         
         # Add is_agreed status for each annotation
         for annotation in annotations:
@@ -114,10 +149,17 @@ class AnnotationCRUD:
         return annotations
 
     def get_by_annotator(self, db: Session, annotator_id: int, skip: int = 0, limit: int = 100) -> List[Annotation]:
-        """Get annotations by a specific annotator."""
-        annotations = db.query(Annotation).filter(
-            Annotation.annotator_id == annotator_id
-        ).offset(skip).limit(limit).all()
+        """Get annotations by a specific annotator, ordered by updated_at descending."""
+        annotations = (
+            db.query(Annotation)
+            .filter(Annotation.annotator_id == annotator_id)
+            .order_by(
+                func.coalesce(Annotation.updated_at, Annotation.created_at).desc(),
+            )
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
         
         # Add is_agreed status for each annotation
         for annotation in annotations:
@@ -126,10 +168,17 @@ class AnnotationCRUD:
         return annotations
 
     def get_by_type(self, db: Session, annotation_type: str, skip: int = 0, limit: int = 100) -> List[Annotation]:
-        """Get annotations by type."""
-        annotations = db.query(Annotation).filter(
-            Annotation.annotation_type == annotation_type
-        ).offset(skip).limit(limit).all()
+        """Get annotations by type, ordered by updated_at descending."""
+        annotations = (
+            db.query(Annotation)
+            .filter(Annotation.annotation_type == annotation_type)
+            .order_by(
+                func.coalesce(Annotation.updated_at, Annotation.created_at).desc(),
+            )
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
         
         # Add is_agreed status for each annotation
         for annotation in annotations:

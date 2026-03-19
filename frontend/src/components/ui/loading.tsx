@@ -28,9 +28,11 @@ export const Loading: React.FC<LoadingProps> = ({
     <div className={`flex items-center justify-center py-8 ${className}`}>
       <div className="text-center">
         <AiOutlineLoading3Quarters
-          className={`${sizeClasses[size]} animate-spin text-blue-600 mx-auto mb-2`}
+          className={`${sizeClasses[size]} animate-spin text-primary mx-auto mb-2`}
         />
-        <p className={`text-blue-600 ${textSizeClasses[size]}`}>{message}</p>
+        <p className={`text-muted-foreground ${textSizeClasses[size]}`}>
+          {message}
+        </p>
       </div>
     </div>
   );
@@ -39,10 +41,9 @@ export const Loading: React.FC<LoadingProps> = ({
 export const FullScreenLoading: React.FC<{ message?: string }> = ({
   message = "Loading Dashboard...",
 }) => (
-  <div className="min-h-screen bg-gradient-to-br from-slate-50 to-blue-50 pt-16 flex items-center justify-center">
+  <div className="min-h-screen bg-background pt-16 flex items-center justify-center">
     <Loading size="lg" message={message} />
   </div>
 );
 
-// Re-export AppLoading for convenience
 export { AppLoading } from "./app-loading";

@@ -11,38 +11,30 @@ function ProfileArea() {
 
   const toggleDropdown = () => setIsOpen(!isOpen);
 
-  // Close dropdown when clicking outside
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (
         dropdownRef.current &&
         !dropdownRef.current.contains(event.target as Node)
       ) {
-        // Check if the click is on a select dropdown or its content
         const target = event.target as Element;
         const isSelectContent = target.closest(
           "[data-radix-popper-content-wrapper]"
         );
         const isSelectTrigger = target.closest("[data-radix-select-trigger]");
-
-        // Don't close if clicking on select components
-        if (isSelectContent || isSelectTrigger) {
-          return;
-        }
-
+        if (isSelectContent || isSelectTrigger) return;
         setIsOpen(false);
       }
     };
-
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
   return (
-    <div className={`relative `} ref={dropdownRef}>
-      {/* Profile Button */}
+    <div className="relative" ref={dropdownRef}>
       <button
         onClick={toggleDropdown}
-        className="flex font-google-sans items-center space-x-2 px-3 py-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-blue-500 focus:ring-offset-2"
+        className="flex items-center gap-2 px-3 py-2 rounded-lg hover:bg-accent transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-ring focus:ring-offset-2 focus:ring-offset-background"
         aria-expanded={isOpen}
         aria-haspopup="true"
       >
@@ -52,31 +44,30 @@ function ProfileArea() {
           size={36}
         />
         <div className="hidden sm:flex flex-col items-start">
-          <span className="text-sm font-medium text-gray-900 dark:text-gray-100">
+          <span className="text-sm font-medium text-foreground">
             {currentUser?.name}
           </span>
-          <span className="text-xs text-gray-500 dark:text-gray-400">
+          <span className="text-xs text-muted-foreground">
             {currentUser?.email}
           </span>
         </div>
         <MdKeyboardArrowDown
-          className={`w-5 h-5 text-gray-500 transition-transform duration-200 ${
+          className={`w-5 h-5 text-muted-foreground transition-transform duration-200 ${
             isOpen ? "rotate-180" : ""
           }`}
         />
       </button>
 
-      {/* Dropdown Menu */}
       <div
         style={{ display: isOpen ? "block" : "none" }}
-        className={`absolute w-full  right-0  bg-[rgba(255,255,255,0.5)] dark:bg-gray-800 rounded-b-2xl  py-2 z-50`}
+        className="absolute w-full right-0 mt-1 bg-popover border border-border rounded-xl py-2 shadow-lg z-50"
       >
-        {/* Logout Button */}
         <Link
-          className="w-max px-2 float-right mr-4 py-1 flex items-center self-end shadow-md  text-sm gap-2 bg-blue-100 hover:bg-blue-200 cursor-pointer dark:hover:bg-red-900/20 rounded-lg transition-colors duration-150"
+          className="flex items-center gap-2 px-4 py-2 mx-2 text-sm text-foreground hover:bg-accent rounded-lg transition-colors"
           to="/logout"
         >
-          <MdLogout /> <span>logout</span>
+          <MdLogout />
+          <span>Logout</span>
         </Link>
       </div>
     </div>

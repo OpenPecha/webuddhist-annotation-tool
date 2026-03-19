@@ -207,10 +207,9 @@ def upload_text_file(
             at = annotation_type_crud.get(db=db, type_id=primary_annotation_type_id)
             if at:
                 selected_type_name = at.name
-        # Create POS annotations from TEI annotated layer (output_combined style).
-        # Store label as plain value (e.g. n.prop); annotation_type="pos" identifies the type.
-        for ann in tei_annotations:
-            ann_create = AnnotationCreate(
+        # Create POS annotations from TEI annotated layer (output_combined style) in one commit.
+        pos_creates = [
+            AnnotationCreate(
                 text_id=created_text.id,
                 annotation_type="pos",
                 start_position=ann.start_position,
@@ -219,27 +218,40 @@ def upload_text_file(
                 label=ann.label,
                 meta=ann.meta,
             )
-            annotation_crud.create_bulk(
-                db=db, obj_in=ann_create, annotator_id=None
-            )
-        # Create editorial annotations (add, unclear, hi, decoration) with selected type (tei.xml style)
+            for ann in tei_annotations
+        ]
+        annotation_crud.create_many_in_one_commit(
+            db=db,
+            items=pos_creates,
+            annotator_id=None,
+            text_id=created_text.id,
+            set_text_progress=True,
+        )
+        # Create editorial annotations (add, unclear, hi, decoration) with selected type in one commit.
         if tei_editorial_annotations and selected_type_name:
+            editorial_creates = []
             for ann in tei_editorial_annotations:
                 meta = ann.meta or {}
                 if ann.label:
                     meta["tei_element"] = ann.label
-                ann_create = AnnotationCreate(
-                    text_id=created_text.id,
-                    annotation_type=selected_type_name,
-                    start_position=ann.start_position,
-                    end_position=ann.end_position,
-                    selected_text=ann.selected_text,
-                    label=ann.label,
-                    meta=meta,
+                editorial_creates.append(
+                    AnnotationCreate(
+                        text_id=created_text.id,
+                        annotation_type=selected_type_name,
+                        start_position=ann.start_position,
+                        end_position=ann.end_position,
+                        selected_text=ann.selected_text,
+                        label=ann.label,
+                        meta=meta,
+                    )
                 )
-                annotation_crud.create_bulk(
-                    db=db, obj_in=ann_create, annotator_id=None
-                )
+            annotation_crud.create_many_in_one_commit(
+                db=db,
+                items=editorial_creates,
+                annotator_id=None,
+                text_id=created_text.id,
+                set_text_progress=True,
+            )
         # Attach annotation types for frontend filter selection (XML upload only)
         types_created: List[str] = []
         if tei_annotations:

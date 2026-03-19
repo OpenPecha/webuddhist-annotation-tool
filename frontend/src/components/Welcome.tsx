@@ -26,73 +26,79 @@ export const Welcome = () => {
   ];
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-blue-50 via-white to-purple-50 dark:from-gray-900 dark:via-gray-800 dark:to-gray-900">
-      {/* Hero Section */}
-      <div className="container mx-auto px-4 py-16 md:py-24">
+    <div className="min-h-screen bg-background relative overflow-hidden">
+      {/* Subtle paper texture / gradient mesh */}
+      <div
+        className="absolute inset-0 opacity-[0.4] dark:opacity-20 pointer-events-none"
+        style={{
+          backgroundImage: `
+            radial-gradient(ellipse 80% 50% at 70% -20%, oklch(0.55 0.18 45 / 0.08), transparent),
+            radial-gradient(ellipse 60% 40% at 0% 100%, oklch(0.55 0.12 45 / 0.06), transparent)
+          `,
+        }}
+      />
+      <div className="absolute inset-0 bg-[url('data:image/svg+xml;base64,PHN2ZyB3aWR0aD0iNjAiIGhlaWdodD0iNjAiIHZpZXdCb3g9IjAgMCA2MCA2MCIgeG1sbnM9Imh0dHA6Ly93d3cudzMub3JnLzIwMDAvc3ZnIj48ZyBmaWxsPSJub25lIiBmaWxsLXJ1bGU9ImV2ZW5vZGQiPjxnIGZpbGw9IiMwMDAiIGZpbGwtb3BhY2l0eT0iMC4wMiI+PGNpcmNsZSBjeD0iMzAiIGN5PSIzMCIgcj0iMS41Ii8+PC9nPjwvZz48L3N2Zz4=')] opacity-60 dark:opacity-30 pointer-events-none" />
+
+      <div className="container relative mx-auto px-4 py-16 md:py-24">
         <div className="max-w-6xl mx-auto">
-          {/* Main Content */}
-          <div className="text-center space-y-8 mb-16">
-            {/* Logo/Title Section */}
-            <div className="space-y-4 animate-fade-in">
-              <div className="flex justify-center mb-6">
+          {/* Hero */}
+          <div className="text-center space-y-8 mb-20">
+            <div className="space-y-4">
+              <div className="flex justify-center mb-6 animate-reveal">
                 <div className="relative">
-                  <div className="absolute inset-0 bg-blue-500 blur-2xl opacity-20 rounded-full"></div>
-                  <FileText className="w-20 h-20 text-blue-600 dark:text-blue-400 relative" />
+                  <div className="absolute inset-0 bg-primary/20 blur-2xl rounded-full scale-150" />
+                  <div className="relative p-4 rounded-2xl bg-card border border-border shadow-sm">
+                    <FileText className="w-14 h-14 text-primary" strokeWidth={1.5} />
+                  </div>
                 </div>
               </div>
-              <h1 className="text-5xl md:text-7xl font-bold text-gray-900 dark:text-white tracking-tight">
+              <h1 className="font-display text-5xl md:text-7xl font-semibold text-foreground tracking-tight animate-reveal animate-reveal-delay-1">
                 Buddhist AI Tool
               </h1>
-              <p className="text-2xl md:text-3xl font-semibold text-transparent bg-clip-text bg-gradient-to-r from-blue-600 to-purple-600 dark:from-blue-400 dark:to-purple-400">
+              <p className="font-display text-2xl md:text-3xl font-medium text-primary animate-reveal animate-reveal-delay-2">
                 Annotation Platform
               </p>
-              <p className="text-xl text-gray-600 dark:text-gray-300 max-w-2xl mx-auto leading-relaxed">
+              <p className="text-lg md:text-xl text-muted-foreground max-w-2xl mx-auto leading-relaxed animate-reveal animate-reveal-delay-3">
                 A powerful platform for annotating and reviewing Tibetan texts with collaborative tools and intelligent workflows
               </p>
             </div>
 
-            {/* CTA Button */}
-            <div className="flex justify-center pt-4">
+            <div className="flex justify-center pt-4 animate-reveal animate-reveal-delay-4">
               <Link
                 to="/login"
-                className="group relative inline-flex items-center gap-3 px-10 py-5 bg-gradient-to-r from-blue-600 to-purple-600 hover:from-blue-700 hover:to-purple-700 text-white font-semibold text-lg rounded-2xl shadow-2xl hover:shadow-blue-500/50 transform hover:scale-105 transition-all duration-300 focus:outline-none focus:ring-4 focus:ring-blue-500 focus:ring-offset-2 dark:focus:ring-offset-gray-900"
+                className="group inline-flex items-center gap-3 px-8 py-4 bg-primary text-primary-foreground font-medium rounded-xl shadow-lg shadow-primary/25 hover:shadow-xl hover:shadow-primary/30 hover:bg-primary/90 transition-all duration-300 focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 focus:ring-offset-background"
               >
                 <span>Get Started</span>
                 <svg
-                  className="w-5 h-5 group-hover:translate-x-1 transition-transform"
+                  className="w-5 h-5 group-hover:translate-x-0.5 transition-transform"
                   fill="none"
                   viewBox="0 0 24 24"
                   stroke="currentColor"
+                  strokeWidth={2}
                 >
-                  <path
-                    strokeLinecap="round"
-                    strokeLinejoin="round"
-                    strokeWidth={2}
-                    d="M13 7l5 5m0 0l-5 5m5-5H6"
-                  />
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M13 7l5 5m0 0l-5 5m5-5H6" />
                 </svg>
               </Link>
             </div>
           </div>
 
-          {/* Features Grid */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-16">
+          {/* Features */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-20">
             {features.map((feature, index) => (
               <div
-                key={index}
-                className="group p-6 bg-white dark:bg-gray-800 rounded-2xl shadow-lg hover:shadow-2xl transform hover:-translate-y-1 transition-all duration-300 border border-gray-100 dark:border-gray-700"
-                style={{
-                  animationDelay: `${index * 100}ms`,
-                }}
+                key={feature.title}
+                className={`group p-6 bg-card border border-border rounded-xl shadow-sm hover:shadow-md hover:border-primary/30 transition-all duration-300 hover:-translate-y-0.5 animate-reveal ${
+                  index === 0 ? "animate-reveal-delay-2" : index === 1 ? "animate-reveal-delay-3" : index === 2 ? "animate-reveal-delay-4" : "animate-reveal-delay-5"
+                }`}
               >
                 <div className="flex flex-col items-center text-center space-y-3">
-                  <div className="p-3 bg-gradient-to-br from-blue-500 to-purple-500 text-white rounded-xl group-hover:scale-110 transition-transform duration-300">
+                  <div className="p-3 rounded-xl bg-primary/10 text-primary group-hover:bg-primary/15 transition-colors">
                     {feature.icon}
                   </div>
-                  <h3 className="font-bold text-lg text-gray-900 dark:text-white">
+                  <h3 className="font-display font-semibold text-lg text-foreground">
                     {feature.title}
                   </h3>
-                  <p className="text-sm text-gray-600 dark:text-gray-300">
+                  <p className="text-sm text-muted-foreground">
                     {feature.description}
                   </p>
                 </div>
@@ -100,12 +106,12 @@ export const Welcome = () => {
             ))}
           </div>
 
-          {/* Additional Info */}
-          <div className="mt-16 text-center space-y-6">
-            <h2 className="text-3xl font-bold text-gray-900 dark:text-white">
+          {/* Why choose */}
+          <div className="mt-20 text-center space-y-8 animate-reveal">
+            <h2 className="font-display text-3xl font-semibold text-foreground">
               Why Choose Text Annotation Tool?
             </h2>
-            <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-4 text-left">
+            <div className="max-w-3xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-3 text-left">
               {[
                 "Intuitive annotation interface",
                 "Real-time collaboration",
@@ -113,13 +119,13 @@ export const Welcome = () => {
                 "Comprehensive export options",
                 "User-friendly dashboard",
                 "Secure authentication",
-              ].map((item, index) => (
+              ].map((item) => (
                 <div
-                  key={index}
-                  className="flex items-center gap-3 p-4 bg-white dark:bg-gray-800 rounded-xl shadow-sm hover:shadow-md transition-shadow"
+                  key={item}
+                  className="flex items-center gap-3 p-4 bg-card border border-border rounded-lg hover:border-primary/20 transition-colors"
                 >
-                  <CheckCircle className="w-5 h-5 text-green-500 flex-shrink-0" />
-                  <span className="text-gray-700 dark:text-gray-200">{item}</span>
+                  <CheckCircle className="w-5 h-5 text-primary flex-shrink-0" />
+                  <span className="text-foreground">{item}</span>
                 </div>
               ))}
             </div>
@@ -127,15 +133,13 @@ export const Welcome = () => {
         </div>
       </div>
 
-      {/* Footer */}
-      <div className="border-t border-gray-200 dark:border-gray-700 py-8">
-        <div className="container mx-auto px-4 text-center text-gray-600 dark:text-gray-400">
+      <footer className="relative border-t border-border py-8 mt-16">
+        <div className="container mx-auto px-4 text-center text-muted-foreground">
           <p className="text-sm">
-            Built with ❤️ for Tibetan text annotation and preservation
+            Built for Tibetan text annotation and preservation
           </p>
         </div>
-      </div>
+      </footer>
     </div>
   );
 };
-

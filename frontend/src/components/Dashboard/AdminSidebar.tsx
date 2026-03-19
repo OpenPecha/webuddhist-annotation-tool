@@ -33,16 +33,33 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   activeAdminTab,
   setActiveAdminTab,
 }) => {
+  const navBtn = (tab: typeof activeAdminTab, icon: React.ReactNode, label: string) => {
+    const active = activeAdminTab === tab;
+    return (
+      <button
+        onClick={() => setActiveAdminTab(tab)}
+        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+          active
+            ? "bg-primary/15 text-primary border border-primary/30 font-medium"
+            : "text-muted-foreground hover:bg-accent hover:text-foreground"
+        }`}
+      >
+        {icon}
+        {sidebarOpen && <span>{label}</span>}
+      </button>
+    );
+  };
+
   return (
     <div
       className={`${
         sidebarOpen ? "w-64" : "w-16"
-      } transition-all duration-300 bg-white shadow-lg border-r border-gray-200 h-[calc(100vh-64px)] absolute left-0  z-10`}
+      } transition-all duration-300 bg-card shadow-md border-r border-border h-[calc(100vh-64px)] absolute left-0 z-10`}
     >
       <div className="p-4 h-full flex flex-col">
         <div className="flex items-center justify-between mb-8">
           <h2
-            className={`font-bold text-xl text-gray-800 ${
+            className={`font-display font-semibold text-xl text-foreground ${
               sidebarOpen ? "block" : "hidden"
             }`}
           >
@@ -58,90 +75,14 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
           </Button>
         </div>
 
-        <nav className="space-y-6 flex-1 gap-2">
-          <button
-            onClick={() => setActiveAdminTab("work")}
-            className={`w-full flex items-center gap-3 px-1 rounded-lg text-left transition-colors ${
-              activeAdminTab === "work"
-                ? "bg-green-100 text-green-700 border-2 border-green-200"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            <IoDocumentText className="w-5 h-5" />
-            {sidebarOpen && <span>Work Management</span>}
-          </button>
-
-          <button
-            onClick={() => setActiveAdminTab("tasks")}
-            className={`w-full flex items-center gap-3 px-1 rounded-lg text-left transition-colors ${
-              activeAdminTab === "tasks"
-                ? "bg-teal-100 text-teal-700 border-2 border-teal-200"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            <IoList className="w-5 h-5" />
-            {sidebarOpen && <span>Task Listing</span>}
-          </button>
-
-          <button
-            onClick={() => setActiveAdminTab("statistics")}
-            className={`w-full flex items-center gap-3 px-1  rounded-lg text-left transition-colors ${
-              activeAdminTab === "statistics"
-                ? "bg-blue-100 text-blue-700 border-2 border-blue-200"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            <IoBarChart className="w-5 h-5" />
-            {sidebarOpen && <span>Statistics</span>}
-          </button>
-
-          <button
-            onClick={() => setActiveAdminTab("users")}
-            className={`w-full flex items-center gap-3 px-1  rounded-lg text-left transition-colors ${
-              activeAdminTab === "users"
-                ? "bg-purple-100 text-purple-700 border-2 border-purple-200"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            <IoPeople className="w-5 h-5" />
-            {sidebarOpen && <span>Users</span>}
-          </button>
-
-          <button
-            onClick={() => setActiveAdminTab("bulk-upload")}
-            className={`w-full flex items-center gap-3 px-1  rounded-lg text-left transition-colors ${
-              activeAdminTab === "bulk-upload"
-                ? "bg-orange-100 text-orange-700 border-2 border-orange-200"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            <IoCloudUpload className="w-5 h-5" />
-            {sidebarOpen && <span>Bulk Upload</span>}
-          </button>
-
-          <button
-            onClick={() => setActiveAdminTab("export")}
-            className={`w-full flex items-center gap-3 px-1  rounded-lg text-left transition-colors ${
-              activeAdminTab === "export"
-                ? "bg-indigo-100 text-indigo-700 border-2 border-indigo-200"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            <IoDownload className="w-5 h-5" />
-            {sidebarOpen && <span>Export Data</span>}
-          </button>
-
-          <button
-            onClick={() => setActiveAdminTab("annotation-lists")}
-            className={`w-full flex items-center gap-3 px-1  rounded-lg text-left transition-colors ${
-              activeAdminTab === "annotation-lists"
-                ? "bg-rose-100 text-rose-700 border-2 border-rose-200"
-                : "text-gray-600 hover:bg-gray-100"
-            }`}
-          >
-            <IoFolderOpen className="w-5 h-5" />
-            {sidebarOpen && <span>Annotation Lists</span>}
-          </button>
+        <nav className="space-y-1 flex-1">
+          {navBtn("work", <IoDocumentText className="w-5 h-5 shrink-0" />, "Work Management")}
+          {navBtn("tasks", <IoList className="w-5 h-5 shrink-0" />, "Task Listing")}
+          {navBtn("statistics", <IoBarChart className="w-5 h-5 shrink-0" />, "Statistics")}
+          {navBtn("users", <IoPeople className="w-5 h-5 shrink-0" />, "Users")}
+          {navBtn("bulk-upload", <IoCloudUpload className="w-5 h-5 shrink-0" />, "Bulk Upload")}
+          {navBtn("export", <IoDownload className="w-5 h-5 shrink-0" />, "Export Data")}
+          {navBtn("annotation-lists", <IoFolderOpen className="w-5 h-5 shrink-0" />, "Annotation Lists")}
         </nav>
       </div>
     </div>

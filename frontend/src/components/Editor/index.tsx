@@ -18,7 +18,6 @@ import { useAnnotationEffects } from "./hooks/useAnnotationEffects";
 import {
   annotationField,
   addAnnotationEffect,
-  clearAnnotationsEffect,
   setHighlightedAnnotationEffect,
 } from "./extensions/annotationField";
 import type { EditorProps, EditorRef } from "./types";
@@ -719,8 +718,8 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
           opacity: "1 !important",
         },
         ".cm-scroller::-webkit-scrollbar": {
-          width: hideScrollbar ? "0px" : "12px",
-          height: hideScrollbar ? "0px" : "12px",
+          width: hideScrollbar ? "0px" : "8px",
+          height: hideScrollbar ? "0px" : "8px",
         },
         ".cm-scroller::-webkit-scrollbar-track": {
           background: hideScrollbar ? "transparent" : "#f8f9fa",
@@ -932,7 +931,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
           }}
         />
 
-        <div className="text-sm text-gray-500 sticky w-max bottom-0 right-2 float-right border bg-white border-gray-200 rounded-md p-2">
+        <div className="text-xs text-gray-500 sticky w-max right-1 bottom-1 float-right border  rounded-md py-1 px-2">
           {textRef.current?.length || 0} characters
         </div>
 

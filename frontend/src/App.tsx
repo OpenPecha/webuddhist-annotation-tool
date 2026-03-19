@@ -72,8 +72,10 @@ function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
   if (!isUserSynced) {
     if (syncError) {
       return (
-        <div className="flex min-h-screen items-center justify-center">
-          <p className="text-destructive">{syncError}. Please refresh to retry.</p>
+        <div className="flex min-h-screen items-center justify-center bg-background">
+          <p className="text-destructive font-medium">
+            {syncError}. Please refresh to retry.
+          </p>
         </div>
       );
     }

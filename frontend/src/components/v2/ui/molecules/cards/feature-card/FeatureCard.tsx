@@ -1,4 +1,4 @@
-import { BookOpen, Users, Zap, Eye, FileText } from "lucide-react"
+import { BookOpen, Users, Zap, Eye, FileText } from "lucide-react";
 
 const features = [
   {
@@ -26,28 +26,28 @@ const features = [
     title: "Parallel Editing",
     description: "Edit source and target text side by side",
   },
-]
+];
 
 function FeatureCard() {
   return (
     <div className="space-y-8">
-      <h2 className="text-2xl font-semibold text-gray-900 dark:text-white">
+      <h2 className="font-display text-2xl font-semibold text-foreground">
         Features
       </h2>
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
         {features.map((feature) => (
           <div
             key={feature.title}
-            className="group p-6 rounded-xl border border-gray-200 dark:border-gray-800 bg-white/50 dark:bg-gray-900/50 hover:border-cyan-500/50 dark:hover:border-cyan-400/50 transition-colors"
+            className="group p-6 rounded-xl border border-border bg-card hover:border-primary/30 hover:shadow-md transition-all duration-300 hover:-translate-y-0.5"
           >
             <div className="flex flex-col space-y-3">
-              <div className="p-3 w-fit rounded-lg bg-cyan-500/10 dark:bg-cyan-400/10 text-cyan-600 dark:text-cyan-400 group-hover:bg-cyan-500/20 dark:group-hover:bg-cyan-400/20 transition-colors">
+              <div className="p-3 w-fit rounded-lg bg-primary/10 text-primary group-hover:bg-primary/15 transition-colors">
                 {feature.icon}
               </div>
-              <h3 className="font-semibold text-gray-900 dark:text-white">
+              <h3 className="font-display font-semibold text-foreground">
                 {feature.title}
               </h3>
-              <p className="text-sm text-gray-600 dark:text-gray-400">
+              <p className="text-sm text-muted-foreground">
                 {feature.description}
               </p>
             </div>
@@ -55,7 +55,7 @@ function FeatureCard() {
         ))}
       </div>
     </div>
-  )
+  );
 }
 
-export default FeatureCard
+export default FeatureCard;

@@ -93,7 +93,7 @@ export const TextAnnotator = forwardRef<TextAnnotatorRef, TextAnnotatorProps>(
     return (
       <div className="flex flex-col h-full">
         {/* Header with Search Bar and Translation Toggle */}
-        <div className="bg-gray-50 p-2 border-b flex items-center justify-between gap-4">
+        <div className="border-b flex items-center justify-between gap-4">
           <div className="flex-1">
             <SearchComponent
               text={text}
@@ -153,7 +153,7 @@ export const TextAnnotator = forwardRef<TextAnnotatorRef, TextAnnotatorProps>(
                   isDeletingAnnotation={isDeletingAnnotation}
                   isUpdatingAnnotation={isUpdatingAnnotation}
                   highlightedAnnotationId={highlightedAnnotationId}
-                  hideScrollbar={true}
+                  hideScrollbar={false}
                   annotationMode={annotationMode}
                 />
               </div>
@@ -180,7 +180,7 @@ export const TextAnnotator = forwardRef<TextAnnotatorRef, TextAnnotatorProps>(
                   isCreatingAnnotation={false}
                   isDeletingAnnotation={false}
                   highlightedAnnotationId={null}
-                  hideScrollbar={true}
+                  hideScrollbar={false}
                 />
               </div>
             </div>
@@ -204,7 +204,7 @@ export const TextAnnotator = forwardRef<TextAnnotatorRef, TextAnnotatorProps>(
               isDeletingAnnotation={isDeletingAnnotation}
               isUpdatingAnnotation={isUpdatingAnnotation}
               highlightedAnnotationId={highlightedAnnotationId}
-              hideScrollbar={true}
+              hideScrollbar={false}
               annotationMode={annotationMode}
             />
           </div>
