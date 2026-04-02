@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, type ReactNode } from "react";
 import {
   Card,
   CardContent,
@@ -7,7 +7,6 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/badge";
 import { toast } from "sonner";
 import {
   IoSearch,
@@ -15,22 +14,17 @@ import {
   IoShieldCheckmark,
   IoEye,
   IoCreateOutline,
-  IoTrash,
 } from "react-icons/io5";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import type { UserRole } from "@/api/types";
-import { useAuth } from "@/auth/use-auth-hook";
 import {
   useUsers,
   useSearchUsers,
   useUpdateUser,
   useToggleUserStatus,
-  useDeleteUser,
 } from "@/hooks";
 
-interface UserManagementProps {
-  className?: string;
-}
+type UserManagementProps = Readonly<{ className?: string }>;
 
 export function UserManagement({ className }: UserManagementProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -38,8 +32,6 @@ export function UserManagement({ className }: UserManagementProps) {
   const [selectedStatus, setSelectedStatus] = useState<
     "all" | "active" | "inactive"
   >("all");
-  const { currentUser } = useAuth();
-
   // Fetch users
   const {
     data: users = [],
@@ -62,14 +54,7 @@ export function UserManagement({ className }: UserManagementProps) {
   // Toggle user status mutation
   const toggleUserStatusMutation = useToggleUserStatus();
 
-  // Delete user mutation
-  const deleteUserMutation = useDeleteUser();
-
-  const handleRoleChange = (
-    userId: number,
-    newRole: UserRole,
-    oldRole: UserRole
-  ) => {
+  const handleRoleChange = (userId: number, newRole: UserRole) => {
     updateUserMutation.mutate(
       { userId, userData: { role: newRole } },
       {
@@ -111,28 +96,6 @@ export function UserManagement({ className }: UserManagementProps) {
     );
   };
 
-  const handleDeleteUser = (userId: number) => {
-    if (
-      window.confirm(
-        "Are you sure you want to delete this user? This action cannot be undone."
-      )
-    ) {
-      deleteUserMutation.mutate(userId, {
-        onSuccess: () => {
-          toast.success("✅ User Deleted", {
-            description: "User has been successfully deleted",
-          });
-        },
-        onError: (error) => {
-          toast.error("❌ Delete Failed", {
-            description:
-              error instanceof Error ? error.message : "Failed to delete user",
-          });
-        },
-      });
-    }
-  };
-
   const handleSearch = (query: string) => {
     setSearchQuery(query);
   };
@@ -152,21 +115,6 @@ export function UserManagement({ className }: UserManagementProps) {
     }
   };
 
-  const getRoleColor = (role: UserRole) => {
-    switch (role) {
-      case "admin":
-        return "bg-red-100 text-red-800";
-      case "reviewer":
-        return "bg-purple-100 text-purple-800";
-      case "annotator":
-        return "bg-blue-100 text-blue-800";
-      case "user":
-        return "bg-gray-100 text-gray-800";
-      default:
-        return "bg-gray-100 text-gray-800";
-    }
-  };
-
   const displayUsers = searchQuery.length > 0 ? searchResults : users;
 
   if (error) {
@@ -181,6 +129,70 @@ export function UserManagement({ className }: UserManagementProps) {
           </div>
         </CardContent>
       </Card>
+    );
+  }
+
+  let usersListBody: ReactNode;
+  if (isLoading || isSearching) {
+    usersListBody = (
+      <div className="flex items-center justify-center py-8">
+        <AiOutlineLoading3Quarters className="w-8 h-8 animate-spin text-blue-600" />
+        <span className="ml-2 text-blue-600">Loading users...</span>
+      </div>
+    );
+  } else if (displayUsers.length === 0) {
+    usersListBody = (
+      <div className="text-center py-8 text-gray-500">
+        <IoPeople className="w-12 h-12 mx-auto mb-4 text-gray-300" />
+        <p>No users found</p>
+      </div>
+    );
+  } else {
+    usersListBody = (
+      <div className="space-y-4">
+        {displayUsers.map((user) => (
+          <div
+            key={user.id}
+            className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
+          >
+            <div className="flex items-center space-x-4">
+              <div className="flex items-center space-x-2">
+                {getRoleIcon(user.role)}
+                <div>
+                  <div className="font-medium text-gray-900">
+                    {user.full_name || user.username}
+                  </div>
+                  <div className="text-sm text-gray-500">{user.email}</div>
+                  <div className="text-xs text-gray-400">@{user.username}</div>
+                </div>
+              </div>
+            </div>
+            <div className="flex items-center space-x-2">
+              <select
+                value={user.role}
+                onChange={(e) =>
+                  handleRoleChange(user.id, e.target.value as UserRole)
+                }
+                disabled={updateUserMutation.isPending}
+                className="w-32 pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+              >
+                <option value="admin">Admin</option>
+                <option value="reviewer">Reviewer</option>
+                <option value="annotator">Annotator</option>
+                <option value="user">User</option>
+              </select>
+              <Button
+                size="sm"
+                variant={user.is_active ? "destructive" : "outline"}
+                onClick={() => handleStatusToggle(user.id, user.is_active)}
+                disabled={toggleUserStatusMutation.isPending}
+              >
+                {user.is_active ? "Deactivate" : "Activate"}
+              </Button>
+            </div>
+          </div>
+        ))}
+      </div>
     );
   }
 
@@ -234,68 +246,7 @@ export function UserManagement({ className }: UserManagementProps) {
           </select>
         </div>
 
-        {/* Users List */}
-        {isLoading || isSearching ? (
-          <div className="flex items-center justify-center py-8">
-            <AiOutlineLoading3Quarters className="w-8 h-8 animate-spin text-blue-600" />
-            <span className="ml-2 text-blue-600">Loading users...</span>
-          </div>
-        ) : displayUsers.length === 0 ? (
-          <div className="text-center py-8 text-gray-500">
-            <IoPeople className="w-12 h-12 mx-auto mb-4 text-gray-300" />
-            <p>No users found</p>
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {displayUsers.map((user) => (
-              <div
-                key={user.id}
-                className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
-              >
-                <div className="flex items-center space-x-4">
-                  <div className="flex items-center space-x-2">
-                    {getRoleIcon(user.role)}
-                    <div>
-                      <div className="font-medium text-gray-900">
-                        {user.full_name || user.username}
-                      </div>
-                    
-                    </div>
-                  </div>
-                
-                </div>
-                <div className="flex items-center space-x-2">
-                  <select
-                    value={user.role}
-                    onChange={(e) =>
-                      handleRoleChange(
-                        user.id,
-                        e.target.value as UserRole,
-                        user.role
-                      )
-                    }
-                    disabled={updateUserMutation.isPending}
-                    className="w-32 pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-                  >
-                    <option value="admin">Admin</option>
-                    <option value="reviewer">Reviewer</option>
-                    <option value="annotator">Annotator</option>
-                    <option value="user">User</option>
-                  </select>
-                  <Button
-                    size="sm"
-                    variant={user.is_active ? "destructive" : "outline"}
-                    onClick={() => handleStatusToggle(user.id, user.is_active)}
-                    disabled={toggleUserStatusMutation.isPending}
-                  >
-                    {user.is_active ? "Deactivate" : "Activate"}
-                  </Button>
-                 
-                </div>
-              </div>
-            ))}
-          </div>
-        )}
+        {usersListBody}
       </CardContent>
     </Card>
   );

@@ -11,6 +11,7 @@ import { useAnnotationColors } from "./hooks/use-annotation-colors";
 import { UserbackProvider } from "./providers/UserbackProvider";
 import { Welcome } from "./components/Welcome";
 import { AdminDashboard } from "./components/Dashboard";
+import { AdminRoute } from "./components/AdminRoute";
 import Navbar from "./components/Navbar";
 import Login from "./pages/Login";
 import Logout from "./pages/Logout";
@@ -112,10 +113,12 @@ function AppContent() {
         path="/admin"
         element={
           <Layout>
-            <Navbar />
-            <Suspense fallback={<FullScreenLoading />}>
-              <AdminDashboard />
-            </Suspense>
+            <AdminRoute>
+              <Navbar />
+              <Suspense fallback={<FullScreenLoading />}>
+                <AdminDashboard />
+              </Suspense>
+            </AdminRoute>
           </Layout>
         }
       />

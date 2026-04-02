@@ -91,4 +91,40 @@ export const exportApi = {
       throw error;
     }
   },
+
+  /**
+   * Download a single text document with annotations as JSON (admin).
+   */
+  async exportSingleText(textId: number): Promise<Blob> {
+    const url = `${SERVER_URL}/export/text/${textId}`;
+    const response = await fetch(url, {
+      method: "GET",
+      headers: await getHeaders(),
+    });
+    if (!response.ok) {
+      const errorText = await response.text();
+      throw new Error(`Export failed: ${response.status} ${errorText}`);
+    }
+    return response.blob();
+  },
+
+  async downloadSingleText(textId: number, fallbackTitle?: string): Promise<void> {
+    const blob = await this.exportSingleText(textId);
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement("a");
+    link.href = url;
+    const safe =
+      fallbackTitle
+        ?.replace(/[^\w\- ]+/g, "")
+        .trim()
+        .replace(/\s+/g, "_")
+        .slice(0, 40) || "";
+    link.download = safe
+      ? `text_${textId}_${safe}.json`
+      : `text_${textId}.json`;
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    window.URL.revokeObjectURL(url);
+  },
 };

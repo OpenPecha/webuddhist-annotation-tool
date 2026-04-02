@@ -3,7 +3,7 @@
 import json
 from datetime import datetime
 from io import BytesIO
-from typing import Any
+from typing import Any, List
 
 from fastapi import HTTPException, status
 from fastapi.responses import StreamingResponse
@@ -11,6 +11,44 @@ from sqlalchemy.orm import Session
 
 from crud.text import text_crud
 from crud.annotation import annotation_crud
+
+
+def _format_annotation_dict(annotation: Any) -> dict:
+    annotation_data = {
+        "annotation_type": annotation.annotation_type,
+        "start_position": annotation.start_position,
+        "end_position": annotation.end_position,
+        "label": annotation.label or annotation.annotation_type,
+    }
+    if annotation.name:
+        annotation_data["name"] = annotation.name
+    if annotation.level:
+        annotation_data["level"] = annotation.level
+    if annotation.selected_text:
+        annotation_data["selected_text"] = annotation.selected_text
+    if annotation.confidence is not None:
+        annotation_data["confidence"] = annotation.confidence
+    if annotation.meta:
+        annotation_data["meta"] = annotation.meta
+    return annotation_data
+
+
+def build_export_payload_for_text(text: Any, annotations: List[Any]) -> dict:
+    """Same JSON shape as each file inside the bulk ZIP export."""
+    formatted_annotations = [
+        _format_annotation_dict(annotation) for annotation in annotations
+    ]
+    export_data: dict = {
+        "text": {"title": text.title, "content": text.content},
+        "annotations": formatted_annotations,
+    }
+    if text.translation:
+        export_data["text"]["translation"] = text.translation
+    if getattr(text, "language", None):
+        export_data["text"]["language"] = text.language
+    if getattr(text, "source", None):
+        export_data["text"]["source"] = text.source
+    return export_data
 
 
 def get_export_stats(
@@ -54,6 +92,34 @@ def get_export_stats(
     }
 
 
+def export_single_text(
+    db: Session,
+    current_user: Any,
+    text_id: int,
+) -> StreamingResponse:
+    """Export one text and its annotations as JSON (admin only)."""
+    text = text_crud.get(db, text_id)
+    if not text:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Text not found",
+        )
+    annotations = annotation_crud.get_by_text(db, text.id)
+    payload = build_export_payload_for_text(text, annotations)
+    json_content = json.dumps(payload, indent=2, ensure_ascii=False)
+    safe_title = "".join(
+        c for c in text.title if c.isalnum() or c in (" ", "-", "_")
+    ).rstrip().replace(" ", "_")
+    filename = f"text_{text.id}_{safe_title[:50]}.json"
+    return StreamingResponse(
+        BytesIO(json_content.encode("utf-8")),
+        media_type="application/json; charset=utf-8",
+        headers={
+            "Content-Disposition": f'attachment; filename="{filename}"',
+        },
+    )
+
+
 def export_data(
     db: Session,
     current_user: Any,
@@ -95,43 +161,13 @@ def export_data(
     with zipfile.ZipFile(zip_buffer, "w", zipfile.ZIP_DEFLATED) as zip_file:
         for text in texts:
             annotations = annotation_crud.get_by_text(db, text.id)
-            formatted_annotations = []
-            for annotation in annotations:
-                annotation_data = {
-                    "annotation_type": annotation.annotation_type,
-                    "start_position": annotation.start_position,
-                    "end_position": annotation.end_position,
-                    "label": annotation.label or annotation.annotation_type,
-                }
-                if annotation.name:
-                    annotation_data["name"] = annotation.name
-                if annotation.level:
-                    annotation_data["level"] = annotation.level
-                if annotation.selected_text:
-                    annotation_data["selected_text"] = annotation.selected_text
-                if annotation.confidence is not None:
-                    annotation_data["confidence"] = annotation.confidence
-                if annotation.meta:
-                    annotation_data["meta"] = annotation.meta
-                formatted_annotations.append(annotation_data)
-
-            export_data = {
-                "text": {"title": text.title, "content": text.content},
-                "annotations": formatted_annotations,
-            }
-            if text.translation:
-                export_data["text"]["translation"] = text.translation
-            if getattr(text, "language", None):
-                export_data["text"]["language"] = text.language
-            if getattr(text, "source", None):
-                export_data["text"]["source"] = text.source
-
+            export_payload = build_export_payload_for_text(text, annotations)
             safe_title = "".join(
                 c for c in text.title if c.isalnum() or c in (" ", "-", "_")
             ).rstrip().replace(" ", "_")
             filename = f"text_{text.id}_{safe_title[:50]}.json"
             json_content = json.dumps(
-                export_data, indent=2, ensure_ascii=False
+                export_payload, indent=2, ensure_ascii=False
             )
             zip_file.writestr(filename, json_content.encode("utf-8"))
 

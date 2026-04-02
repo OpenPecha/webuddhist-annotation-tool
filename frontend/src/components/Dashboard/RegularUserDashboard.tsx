@@ -258,17 +258,7 @@ export const RegularUserDashboard: React.FC = () => {
               <span className="ml-2">Load Text</span>
             </Button>
           )}
-          {/* Bulk Upload Button - Show for admins only */}
-        
-          {currentUser?.role === "admin" && (
-            <Link
-              to="/admin"
-              className="text-sm font-medium text-primary hover:underline"
-            >
-              Admin Dashboard
-            </Link>
-          )}
-
+  
         </div>
       </div>
 

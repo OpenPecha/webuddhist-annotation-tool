@@ -1,7 +1,6 @@
 """Export API routes. Thin layer: dependencies and controller delegation."""
 
-from fastapi import APIRouter, Depends, Query
-from fastapi.responses import StreamingResponse
+from fastapi import APIRouter, Depends, Path, Query
 from sqlalchemy.orm import Session
 
 from deps import get_db
@@ -27,6 +26,16 @@ def get_export_stats(
     return export_controller.get_export_stats(
         db, current_user, from_date, to_date, filter_type
     )
+
+
+@router.get("/text/{text_id}")
+def export_single_text(
+    text_id: int = Path(..., ge=1, description="Text document ID"),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """Download one text and its annotations as JSON. Admin only."""
+    return export_controller.export_single_text(db, current_user, text_id)
 
 
 @router.get("/download")

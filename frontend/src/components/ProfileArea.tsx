@@ -1,13 +1,18 @@
 import { useState, useRef, useEffect } from "react";
 import AvatarWrapper from "./ui/custom-avatar";
 import { useAuth } from "@/auth/use-auth-hook";
+import { useCurrentUser } from "@/hooks";
+import { UserRole } from "@/api/types";
 import { MdKeyboardArrowDown, MdLogout } from "react-icons/md";
+import { IoShieldCheckmark } from "react-icons/io5";
 import { Link } from "react-router-dom";
 
 function ProfileArea() {
   const [isOpen, setIsOpen] = useState(false);
   const { currentUser } = useAuth();
+  const { data: appUser } = useCurrentUser();
   const dropdownRef = useRef<HTMLDivElement>(null);
+  const isAdmin = appUser?.role === UserRole.ADMIN;
 
   const toggleDropdown = () => setIsOpen(!isOpen);
 
@@ -60,11 +65,22 @@ function ProfileArea() {
 
       <div
         style={{ display: isOpen ? "block" : "none" }}
-        className="absolute w-full right-0 mt-1 bg-popover border border-border rounded-xl py-2 shadow-lg z-50"
+        className="absolute right-0 mt-1 min-w-[12rem] bg-popover border border-border rounded-xl py-2 shadow-lg z-50"
       >
+        {isAdmin && (
+          <Link
+            className="flex items-center gap-2 px-4 py-2 mx-2 text-sm text-foreground hover:bg-accent rounded-lg transition-colors"
+            to="/admin"
+            onClick={() => setIsOpen(false)}
+          >
+            <IoShieldCheckmark className="h-4 w-4 shrink-0 text-primary" />
+            <span>Administration</span>
+          </Link>
+        )}
         <Link
           className="flex items-center gap-2 px-4 py-2 mx-2 text-sm text-foreground hover:bg-accent rounded-lg transition-colors"
           to="/logout"
+          onClick={() => setIsOpen(false)}
         >
           <MdLogout />
           <span>Logout</span>

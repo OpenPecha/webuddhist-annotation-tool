@@ -1,30 +1,18 @@
 import React from "react";
 import { Button } from "@/components/ui/button";
 import {
-  IoPeople,
   IoBarChart,
-  IoDocumentText,
-  IoSettings,
-  IoCloudUpload,
   IoList,
-  IoDownload,
-  IoFolderOpen,
+  IoPeople,
+  IoChevronBack,
+  IoChevronForward,
 } from "react-icons/io5";
 
 interface AdminSidebarProps {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
-  activeAdminTab:
-    | "statistics"
-    | "users"
-    | "work"
-    | "bulk-upload"
-    | "tasks"
-    | "export"
-    | "annotation-lists";
-  setActiveAdminTab: (
-    tab: "statistics" | "users" | "work" | "bulk-upload" | "tasks" | "export" | "annotation-lists"
-  ) => void;
+  activeAdminTab: "statistics" | "tasks" | "users";
+  setActiveAdminTab: (tab: "statistics" | "tasks" | "users") => void;
 }
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
@@ -33,58 +21,123 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   activeAdminTab,
   setActiveAdminTab,
 }) => {
-  const navBtn = (tab: typeof activeAdminTab, icon: React.ReactNode, label: string) => {
+  const navBtn = (
+    tab: typeof activeAdminTab,
+    icon: React.ReactNode,
+    label: string,
+    hint: string
+  ) => {
     const active = activeAdminTab === tab;
     return (
       <button
+        type="button"
         onClick={() => setActiveAdminTab(tab)}
-        className={`w-full flex items-center gap-3 px-3 py-2 rounded-lg text-left transition-colors ${
+        title={sidebarOpen ? undefined : label}
+        className={`group relative w-full rounded-xl border text-left transition-all duration-200 ${
           active
-            ? "bg-primary/15 text-primary border border-primary/30 font-medium"
-            : "text-muted-foreground hover:bg-accent hover:text-foreground"
+            ? "border-primary/35 bg-card shadow-[0_1px_0_oklch(0.99_0.01_85),0_12px_32px_-8px_oklch(0.55_0.18_45/0.2)]"
+            : "border-transparent bg-transparent hover:border-border hover:bg-card/80"
         }`}
       >
-        {icon}
-        {sidebarOpen && <span>{label}</span>}
+        <div
+          className={`flex items-center gap-3 px-3 py-2.5 ${
+            sidebarOpen ? "" : "justify-center px-2"
+          }`}
+        >
+          <span
+            className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-lg transition-colors ${
+              active
+                ? "bg-primary text-primary-foreground"
+                : "bg-muted text-muted-foreground group-hover:bg-accent group-hover:text-accent-foreground"
+            }`}
+          >
+            {icon}
+          </span>
+          {sidebarOpen && (
+            <span className="min-w-0 flex-1">
+              <span
+                className={`block font-display text-sm font-semibold tracking-tight ${
+                  active ? "text-foreground" : "text-foreground/85"
+                }`}
+              >
+                {label}
+              </span>
+              <span className="mt-0.5 block text-[11px] leading-snug text-muted-foreground">
+                {hint}
+              </span>
+            </span>
+          )}
+        </div>
+        {active && (
+          <span
+            className="absolute left-0 top-1/2 h-8 w-1 -translate-y-1/2 rounded-r-full bg-primary"
+            aria-hidden
+          />
+        )}
       </button>
     );
   };
 
   return (
-    <div
-      className={`${
-        sidebarOpen ? "w-64" : "w-16"
-      } transition-all duration-300 bg-card shadow-md border-r border-border h-[calc(100vh-64px)] absolute left-0 z-10`}
+    <aside
+      className={`absolute left-0 top-0 z-20 flex h-[calc(100vh-64px)] flex-col border-r border-border/80 bg-sidebar/95 shadow-[4px_0_24px_-12px_oklch(0.35_0.02_65/0.15)] backdrop-blur-md transition-[width] duration-300 ease-out ${
+        sidebarOpen ? "w-64" : "w-[4.5rem]"
+      }`}
     >
-      <div className="p-4 h-full flex flex-col">
-        <div className="flex items-center justify-between mb-8">
-          <h2
-            className={`font-display font-semibold text-xl text-foreground ${
-              sidebarOpen ? "block" : "hidden"
-            }`}
-          >
-            Admin Panel
-          </h2>
+      <div className="flex flex-1 flex-col gap-6 p-3 pt-5">
+        <div
+          className={`flex items-center ${sidebarOpen ? "justify-between gap-2 px-1" : "flex-col gap-3"}`}
+        >
+          {sidebarOpen ? (
+            <div className="min-w-0 pl-1">
+              <p className="font-display text-lg font-semibold tracking-tight text-foreground">
+                Administration
+              </p>
+              <p className="mt-0.5 text-[11px] uppercase tracking-[0.14em] text-muted-foreground">
+                Pecha workspace
+              </p>
+            </div>
+          ) : (
+            <div className="flex h-10 w-10 items-center justify-center rounded-xl bg-primary/10 font-display text-sm font-bold text-primary">
+              A
+            </div>
+          )}
           <Button
             variant="ghost"
-            size="sm"
+            size="icon"
             onClick={() => setSidebarOpen(!sidebarOpen)}
-            className="p-2"
+            className="h-9 w-9 shrink-0 rounded-lg text-muted-foreground hover:bg-accent hover:text-foreground"
+            aria-label={sidebarOpen ? "Collapse admin sidebar" : "Expand admin sidebar"}
           >
-            <IoSettings className="w-4 h-4" />
+            {sidebarOpen ? (
+              <IoChevronBack className="h-4 w-4" />
+            ) : (
+              <IoChevronForward className="h-4 w-4" />
+            )}
           </Button>
         </div>
 
-        <nav className="space-y-1 flex-1">
-          {navBtn("work", <IoDocumentText className="w-5 h-5 shrink-0" />, "Work Management")}
-          {navBtn("tasks", <IoList className="w-5 h-5 shrink-0" />, "Task Listing")}
-          {navBtn("statistics", <IoBarChart className="w-5 h-5 shrink-0" />, "Statistics")}
-          {navBtn("users", <IoPeople className="w-5 h-5 shrink-0" />, "Users")}
-          {navBtn("bulk-upload", <IoCloudUpload className="w-5 h-5 shrink-0" />, "Bulk Upload")}
-          {navBtn("export", <IoDownload className="w-5 h-5 shrink-0" />, "Export Data")}
-          {navBtn("annotation-lists", <IoFolderOpen className="w-5 h-5 shrink-0" />, "Annotation Lists")}
+        <nav className="flex flex-1 flex-col gap-1.5">
+          {navBtn(
+            "statistics",
+            <IoBarChart className="h-4 w-4" />,
+            "Statistics",
+            "Corpus status and charts"
+          )}
+          {navBtn(
+            "tasks",
+            <IoList className="h-4 w-4" />,
+            "Documents",
+            "Browse tasks and export JSON"
+          )}
+          {navBtn(
+            "users",
+            <IoPeople className="h-4 w-4" />,
+            "Users",
+            "Roles and account status"
+          )}
         </nav>
       </div>
-    </div>
+    </aside>
   );
 };

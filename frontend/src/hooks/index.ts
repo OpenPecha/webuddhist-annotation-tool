@@ -103,6 +103,7 @@ export {
   useExportStats,
   useDownloadExport,
   useExportData,
+  useDownloadSingleText,
 } from "./useExport";
 
 // ============================================================================

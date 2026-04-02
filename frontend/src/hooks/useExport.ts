@@ -61,3 +61,18 @@ export const useExportData = () => {
   });
 };
 
+/**
+ * Download one document as JSON (admin task list).
+ */
+export const useDownloadSingleText = () => {
+  return useMutation({
+    mutationFn: ({
+      textId,
+      title,
+    }: {
+      textId: number;
+      title?: string;
+    }) => exportApi.downloadSingleText(textId, title),
+  });
+};
+

@@ -1,10 +1,8 @@
 // Component preloader utility for better performance
 export const preloadDashboardComponents = () => {
-  // Preload AdminWorkSection since it's the default tab
-  import("@/components/Dashboard/AdminWorkSection");
-
-  // Preload AdminStatisticsSection since it's commonly accessed
+  import("@/components/Dashboard/AdminTaskSection");
   import("@/components/Dashboard/AdminStatisticsSection");
+  import("@/components/Dashboard/AdminUsersSection");
 };
 
 export const preloadUserDashboard = () => {
@@ -33,8 +31,7 @@ export const preloadByUserRole = (userRole: string | undefined) => {
 export const preloadAllDashboardComponents = () => {
   import("@/components/Dashboard/AdminDashboard");
   import("@/components/Dashboard/RegularUserDashboard");
-  import("@/components/Dashboard/AdminWorkSection");
+  import("@/components/Dashboard/AdminTaskSection");
   import("@/components/Dashboard/AdminStatisticsSection");
   import("@/components/Dashboard/AdminUsersSection");
-  import("@/components/Dashboard/AdminBulkUploadSection");
 };
