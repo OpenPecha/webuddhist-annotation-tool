@@ -1,5 +1,5 @@
 import "./App.css";
-import { BrowserRouter, Routes, Route } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { AuthProvider } from "./auth/AuthProvider";
 import { Suspense, lazy, useEffect, useState } from "react";
@@ -23,7 +23,12 @@ import { useAuth0 } from "@auth0/auth0-react";
 import type { RegisterUserData } from "./api/types";
 // Lazy load page components
 const Task = lazy(() => import("./pages/Task"));
-const Review = lazy(() => import("./pages/Review"));
+
+/** Old review URLs open the annotation task view instead. */
+function ReviewToTaskRedirect() {
+  const { textId } = useParams<{ textId: string }>();
+  return <Navigate to={textId ? `/task/${textId}` : "/dashboard"} replace />;
+}
 
 const queryClient = new QueryClient();
 
@@ -131,16 +136,7 @@ function AppContent() {
           </Suspense>
         }
       />
-      <Route
-        path="/review/:textId"
-        element={
-          <Layout>
-            <Suspense fallback={<AppLoading message="Loading Review..." />}>
-              <Review />
-            </Suspense>
-          </Layout>
-        }
-      />
+      <Route path="/review/:textId" element={<ReviewToTaskRedirect />} />
     </Routes>
   );
 }

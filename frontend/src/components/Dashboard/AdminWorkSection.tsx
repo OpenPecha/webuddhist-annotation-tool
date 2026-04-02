@@ -254,7 +254,7 @@ function RecentActivityItem({
 
   // Handle clicking on recent activity item
   const handleActivityClick = (textId: number) => {
-    navigate(`/review/${textId}`);
+    navigate(`/task/${textId}`);
   };
 
   return (
