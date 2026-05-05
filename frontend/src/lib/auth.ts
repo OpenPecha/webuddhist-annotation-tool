@@ -1,56 +1,48 @@
-// Centralized auth token management
-let getAccessTokenSilently: (() => Promise<string>) | null = null;
+import {
+  getRegisteredAccessToken,
+  setAccessTokenGetter as registerGetter,
+} from "./fetchWithAccessToken"
+
+export {
+  setAccessTokenGetter,
+  fetchWithAccessToken,
+  outlinerFetch,
+  getRegisteredAccessToken,
+} from "./fetchWithAccessToken"
 
 /**
- * Sets the auth token getter function that all API modules will use
- * This should be called once from AuthWrapper when the user is authenticated
+ * @deprecated Prefer `setAccessTokenGetter` from `@/lib/fetchWithAccessToken`. Registers the same resolver without extras.
  */
-export const setAuthTokenGetter = (tokenGetter: () => Promise<string>) => {
-  getAccessTokenSilently = tokenGetter;
-};
+export const setAuthTokenGetter = (
+  tokenGetter: (() => Promise<string>) | null
+) => {
+  if (!tokenGetter) {
+    registerGetter(null)
+    return
+  }
+  registerGetter(async () => {
+    try {
+      return await tokenGetter()
+    } catch {
+      return null
+    }
+  })
+}
 
 /**
- * Gets auth headers including the authorization token if available
- * @param contentType - Content type: "json" (default), "multipart", or "none"
- * @param includeAuth - Whether to include auth headers (default: true)
- * @returns Headers object with Content-Type (if specified) and Authorization if authenticated
+ * Content-Type only. Bearer tokens are added by `fetchWithAccessToken` for HTTP calls.
+ * @param _includeAuth Deprecated; ignored. Auth is centralized on the fetch wrapper.
  */
 export const getAuthHeaders = async (
   contentType: "json" | "multipart" | "none" = "json",
-  includeAuth = true
+  _includeAuth?: boolean
 ): Promise<Record<string, string>> => {
-  const headers: Record<string, string> = {};
-
-  // Only set Content-Type for JSON requests, FormData will set it automatically for multipart
+  const headers: Record<string, string> = {}
   if (contentType === "json") {
-    headers["Content-Type"] = "application/json";
+    headers["Content-Type"] = "application/json"
   }
+  return headers
+}
 
-  if (includeAuth && getAccessTokenSilently) {
-    try {
-      const token = await getAccessTokenSilently();
-      headers.Authorization = `Bearer ${token}`;
-    } catch (error) {
-      console.error("Error getting access token:", error);
-      // Don't include auth header if token retrieval fails
-    }
-  }
-
-  return headers;
-};
-
-/**
- * Gets the access token directly (for special cases where headers aren't needed)
- * @returns The access token string or null if not available
- */
-export const getAccessToken = async (): Promise<string | null> => {
-  if (getAccessTokenSilently) {
-    try {
-      return await getAccessTokenSilently();
-    } catch (error) {
-      console.error("Error getting access token:", error);
-      return null;
-    }
-  }
-  return null;
-};
+export const getAccessToken = (): Promise<string | null> =>
+  getRegisteredAccessToken()

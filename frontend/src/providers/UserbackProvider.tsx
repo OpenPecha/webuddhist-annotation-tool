@@ -1,7 +1,7 @@
 // UserbackProvider.tsx
 import React, { createContext, useContext, useEffect, useState, useMemo } from 'react';
 import Userback from '@userback/widget';
-import { useAuth } from '../auth/use-auth-hook';
+import { useAuth0 } from '@auth0/auth0-react';
 
 interface UserbackProviderProps {
   children: React.ReactNode;
@@ -15,18 +15,18 @@ const UserbackContext = createContext<UserbackContextType>({ userback: null });
 
 export const UserbackProvider: React.FC<UserbackProviderProps> = ({ children }) => {
   const [userback, setUserback] = useState<any>(null);
- const {currentUser:user} = useAuth();
+ const {user:currentUser} = useAuth0();
   useEffect(() => {
-    if(!user) return;
+    if(!currentUser) return;
     const usebackId = import.meta.env.VITE_USERBACK_ID||"";
     const init = async () => {
       try {
         const options = {
           user_data: {
-            id: user?.id||'anonymous',
+            id: currentUser?.id||'anonymous',
             info: {
-              name: user?.name||'Anonymous User',
-              email: user?.email || ''
+              name: currentUser?.name||'Anonymous User',
+              email: currentUser?.email || ''
             }
           }
         };
@@ -42,13 +42,13 @@ export const UserbackProvider: React.FC<UserbackProviderProps> = ({ children }) 
           message: error?.message,
           stack: error?.stack,
           userbackId: usebackId,
-          userData: user
+          userData: currentUser
         });
       }
     };
     
     init();
-  }, [user]);
+  }, [currentUser]);
 
   const contextValue = useMemo(() => ({ userback }), [userback]);
 

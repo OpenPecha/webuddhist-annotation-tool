@@ -54,6 +54,7 @@ export const queryKeys = {
     all: ["users"] as const,
     detail: (id: number) => ["user", id] as const,
     currentUser: ["current-user"] as const,
+    roleByAuth0: (auth0Sub: string) => ["user-role", auth0Sub] as const,
     search: (query: string) => ["users", "search", query] as const,
     stats: ["user-stats"] as const,
   },

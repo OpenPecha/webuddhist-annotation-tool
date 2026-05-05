@@ -11,9 +11,9 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { IoDocumentText } from "react-icons/io5";
-import { useAuth } from "@/auth/use-auth-hook";
 import type { RecentActivityWithReviewCounts } from "@/api/types";
 import { useMyWorkInProgress, useRecentActivity, useStartWork } from "@/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
 
 // Helper function to format date
 const formatDate = (dateString: string) => {
@@ -60,7 +60,7 @@ const RecentActivityIcon = () => (
 export const AdminWorkSection: React.FC = () => {
   const navigate = useNavigate();
   const [isLoadingText, setIsLoadingText] = React.useState(false);
-  const { currentUser } = useAuth();
+  const { user:currentUser } = useAuth0();
 
   // Fetch user's work in progress
   const { data: workInProgress = [] } = useMyWorkInProgress();

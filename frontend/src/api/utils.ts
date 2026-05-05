@@ -1,6 +1,5 @@
 import { ApiError } from "./errors"
-import { getAuthHeaders } from "../lib/auth"
-import { isTokenExpired } from "../utils/tokenUtils"
+import { fetchWithAccessToken, getRegisteredAccessToken } from "../lib/fetchWithAccessToken"
 
 export { ApiError, handleApiError, isValidationError } from "./errors"
 
@@ -19,43 +18,23 @@ function getStorageToken(): string {
   )
 }
 
-/** Uses Auth0 getAccessTokenSilently so refresh token is used when access token expires. */
-async function getBaseHeadersAsync(): Promise<CustomHeaders> {
-  const headers = await getAuthHeaders("none", true)
-  if (headers.Authorization) return headers
-
-  const token = getStorageToken()
-  if (!token) return {}
-
-  if (isTokenExpired(token)) {
-    return {}
-  }
-  return { Authorization: `Bearer ${token}` }
-}
-
-/**
- * JSON request headers with auth. Use for API calls so token refresh works.
- */
+/** JSON request headers (Content-Type only; Bearer via `fetchWithAccessToken`). */
 export async function getHeaders(): Promise<CustomHeaders> {
-  const base = await getBaseHeadersAsync()
-  return { ...base, "Content-Type": "application/json" }
+  return { "Content-Type": "application/json" }
 }
 
-/**
- * Multipart headers (FormData). Use for file uploads.
- */
+/** Multipart / FormData — do not set Content-Type (browser sets boundary). */
 export async function getHeadersMultipart(): Promise<CustomHeaders> {
-  return getBaseHeadersAsync()
+  return {}
 }
 
 /**
- * Returns a valid token. Prefer getHeaders() for API calls.
+ * Returns a valid token for non-fetch use cases. Prefer API calls through `apiClient` / `fetchWithAccessToken`.
  */
 export async function getAuthToken(): Promise<string> {
-  const headers = await getAuthHeaders("none", true)
-  const auth = headers.Authorization
-  if (auth?.startsWith("Bearer ")) return auth.slice(7)
-  const cached = typeof window !== "undefined" && window.localStorage && localStorage.getItem("auth_token")
+  const token = await getRegisteredAccessToken()
+  if (token) return token
+  const cached = getStorageToken()
   if (cached) return cached
   throw new Error(
     "No authentication token available. Make sure you are logged in."
@@ -77,7 +56,11 @@ function buildQueryString(
  * Central API client. All backend calls should go through apiClient or domain modules (textApi, etc.).
  */
 class ApiClient {
-  constructor(private readonly baseURL: string) {}
+  private readonly baseURL: string
+
+  constructor(baseURL: string) {
+    this.baseURL = baseURL
+  }
 
   private async request<T>(
     endpoint: string,
@@ -91,7 +74,7 @@ class ApiClient {
     }
 
     try {
-      const response = await fetch(url, config)
+      const response = await fetchWithAccessToken(url, config)
 
       if (!response.ok) {
         const errorData = await response.json().catch(() => ({}))
@@ -126,7 +109,7 @@ class ApiClient {
       const url = `${this.baseURL}${endpoint}`
       const headers = await getHeadersMultipart()
       try {
-        const response = await fetch(url, {
+        const response = await fetchWithAccessToken(url, {
           method: "POST",
           body: data,
           headers,
@@ -174,3 +157,6 @@ class ApiClient {
 }
 
 export const apiClient = new ApiClient(SERVER_URL)
+
+/** Re-export for API modules that need the shared authenticated fetch. */
+export { fetchWithAccessToken, outlinerFetch } from "../lib/fetchWithAccessToken"

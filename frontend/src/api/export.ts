@@ -1,4 +1,4 @@
-import { apiClient, getHeaders } from "./utils";
+import { apiClient, getHeaders, fetchWithAccessToken } from "./utils";
 
 // Use the same SERVER_URL as utils.ts to avoid double /v1/ paths
 const SERVER_URL =
@@ -49,7 +49,7 @@ export const exportApi = {
       filter_type: filterType,
     });
 
-    const response = await fetch(`${url}?${params}`, {
+    const response = await fetchWithAccessToken(`${url}?${params}`, {
       method: "GET",
       headers: await getHeaders(),
     });
@@ -97,7 +97,7 @@ export const exportApi = {
    */
   async exportSingleText(textId: number): Promise<Blob> {
     const url = `${SERVER_URL}/export/text/${textId}`;
-    const response = await fetch(url, {
+    const response = await fetchWithAccessToken(url, {
       method: "GET",
       headers: await getHeaders(),
     });

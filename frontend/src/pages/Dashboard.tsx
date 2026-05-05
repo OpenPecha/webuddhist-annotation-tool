@@ -2,8 +2,9 @@ import React, { Suspense, useEffect } from "react";
 import Navbar from "@/components/Navbar";
 import { FullScreenLoading } from "@/components/ui/loading";
 import { preloadByUserRole } from "@/utils/componentPreloader";
-import { useCurrentUser } from "@/hooks";
+import { usePermission } from "@/hooks";
 import Home from "./Home";
+import { useAuth0 } from "@auth0/auth0-react";
 
 const RegularUserDashboard = React.lazy(() =>
   import("@/components/Dashboard").then((module) => ({
@@ -12,17 +13,17 @@ const RegularUserDashboard = React.lazy(() =>
 );
 
 const Dashboard = () => {
-  const { data: currentUser } = useCurrentUser();
+  const { user, isAuthenticated } = useAuth0();
+  const { data: permission } = usePermission();
 
-  // Preload components based on user role for better performance
   useEffect(() => {
-    if (currentUser?.role) {
-      preloadByUserRole(currentUser.role);
+    if (permission?.role) {
+      preloadByUserRole(permission.role);
     }
-  }, [currentUser?.role]);
+  }, [permission?.role]);
 
-  if (!currentUser) {
-    return <Home/>;
+  if (!isAuthenticated || !user) {
+    return <Home />;
   }
   return (
     <div className="flex flex-col h-screen bg-background">
@@ -33,9 +34,5 @@ const Dashboard = () => {
     </div>
   );
 };
-
-
-
-
 
 export default Dashboard;

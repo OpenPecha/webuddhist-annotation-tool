@@ -259,7 +259,6 @@ export const AnnotationTypesFilter = (props: AnnotationTypesFilterProps) => {
       return opts.reduce((s, o) => s + o.count, 0) > 0;
     });
   }, [showOnlyUsedInText, typesToRender, optsByTypeName]);
- console.log(typesVisibleInPanel)
   return (
     <div className="mb-3 h-full border bg-white border-gray-300 rounded overflow-auto">
       <div className="flex flex-col gap-0">

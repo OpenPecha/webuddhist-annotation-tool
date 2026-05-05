@@ -1,10 +1,10 @@
 import React, { useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { useAuth } from "@/auth/use-auth-hook";
+import { useAuth0 } from "@auth0/auth0-react";
 
 const Callback: React.FC = () => {
 	const navigate = useNavigate();
-	const { isAuthenticated } = useAuth();
+	const { isAuthenticated } = useAuth0();
 
 	useEffect(() => {
 		if (isAuthenticated) {

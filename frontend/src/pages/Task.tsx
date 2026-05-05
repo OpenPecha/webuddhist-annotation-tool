@@ -11,12 +11,11 @@ import { SkipConfirmationDialog } from "@/components/SkipConfirmationDialog";
 import { DiplomaticTextPanel } from "@/components/DiplomaticTextPanel";
 import { AnnotationColorSettings } from "@/components/AnnotationColorSettings";
 import { TaskLoadingState, TaskErrorState } from "@/components/Task";
-import { useAuth } from "@/auth/use-auth-hook";
 import {
   useTextWithAnnotations,
   useRecentActivity,
   useAnnotationListHierarchical,
-  useCurrentUser,
+  usePermission,
   useSoftDeleteMyText,
 } from "@/hooks";
 import {
@@ -35,16 +34,15 @@ import { queryKeys } from "@/constants/queryKeys";
 const Index = () => {
   const { textId } = useParams<{ textId: string }>();
   const navigate = useNavigate();
-  const { currentUser } = useAuth();
-  const { data: currentUserData } = useCurrentUser();
+  const { userId, role: userRole } = usePermission();
+  const isViewer = userRole === "user";
+  const currentUserId = userId ?? null;
 
   /** Pending while filter changes are applied (select all / deselect all / toggle type) */
   const [isFilterPending, startFilterTransition] = useTransition();
 
   // Parse textId early for all hooks
   const parsedTextId = textId ? parseInt(textId, 10) : undefined;
-  const currentUserId = currentUser?.id ? parseInt(currentUser.id, 10) : null;
-  const userRole = currentUserData?.role;
 
   // Global state from Zustand stores
   const { sidebarOpen, toggleSidebar } = useAnnotationStore();
@@ -55,7 +53,6 @@ const Index = () => {
     addSelectedAnnotationTypes,
   } = useAnnotationFiltersStore();
 
-  const [sidebarFilterOpen, setSidebarFilterOpen] = useState(true);
   const [diplomaticPanelOpen, setDiplomaticPanelOpen] = useState(false);
   const location = useLocation();
   const queryClient = useQueryClient();
@@ -117,7 +114,8 @@ const Index = () => {
     [...annotationLabelsInText].every((l) => selectedAnnotationTypes.has(l));
 
   // Determine if text should be read-only
-  const isReadOnly = allAnnotationsAccepted || !textData || !allSegmentsSelected;
+  const isReadOnly =
+    isViewer || allAnnotationsAccepted || !textData || !allSegmentsSelected;
 
   /**
    * Custom hook: Annotation CRUD operations
@@ -196,6 +194,7 @@ const Index = () => {
    * Wrapper for addAnnotation that handles selectedText state
    */
   const handleAddAnnotation = (type: string, name?: string, level?: string) => {
+    if (isViewer) return;
     if (!selectedText) return;
     addAnnotationFn(selectedText, type, name, level);
     setSelectedText(null);
@@ -203,6 +202,7 @@ const Index = () => {
 
   /** On text select: always allow selection (for adding annotations). Text content editing is controlled by isReadOnly. */
   const handleTextSelect = (selection: { text: string; start: number; end: number } | null) => {
+    if (isViewer) return;
     setSelectedText(selection);
   };
 
@@ -223,7 +223,7 @@ const Index = () => {
   const annotationsWithoutHeader = useMemo(() => {
     return filteredAnnotations.filter((ann) => ann.type !== "header");
   }, [filteredAnnotations]);
-  const dbUserId = currentUserData?.id;
+  const dbUserId = currentUserId ?? undefined;
   const canDeleteMyText =
     !!parsedTextId &&
     !!textData &&
@@ -273,8 +273,6 @@ const Index = () => {
           {/* Filter: left of editor */}
           <div className="flex-shrink-0 mt-4 mb-4">
             <AnnotationTypesFilter
-              isOpen={sidebarFilterOpen}
-              onToggle={() => setSidebarFilterOpen((o) => !o)}
               annotations={annotationsForUI}
               loading={isFilterPending}
               selectedAnnotationTypes={selectedAnnotationTypes}
@@ -344,10 +342,10 @@ const Index = () => {
               selectedText={selectedText}
               onTextSelect={handleTextSelect}
               onAddAnnotation={handleAddAnnotation}
-              onRemoveAnnotation={removeAnnotation}
-              onUpdateAnnotation={updateAnnotation}
-              onHeaderSelected={handleHeaderSelected}
-              onUpdateHeaderSpan={handleUpdateHeaderSpan}
+              onRemoveAnnotation={isViewer ? () => {} : removeAnnotation}
+              onUpdateAnnotation={isViewer ? () => {} : updateAnnotation}
+              onHeaderSelected={isViewer ? () => {} : handleHeaderSelected}
+              onUpdateHeaderSpan={isViewer ? () => {} : handleUpdateHeaderSpan}
               readOnly={isReadOnly}
               isCreatingAnnotation={isCreatingAnnotation}
               isDeletingAnnotation={isDeletingAnnotation}
@@ -386,10 +384,10 @@ const Index = () => {
             annotations={annotationsWithoutHeader}
             fullText={text}
             isBulkOperationPending={isCreatingAnnotation || isDeletingAnnotation || isBulkOperationPending}
-            onRemoveAnnotation={removeAnnotation}
+            onRemoveAnnotation={isViewer ? () => {} : removeAnnotation}
             onAnnotationClick={handleAnnotationClick}
-            onApplyToAll={applyAnnotationToAll}
-            onRemoveFromAll={removeAnnotationFromAll}
+            onApplyToAll={isViewer ? undefined : applyAnnotationToAll}
+            onRemoveFromAll={isViewer ? undefined : removeAnnotationFromAll}
             isOpen={sidebarOpen}
             onToggle={toggleSidebar}
           />

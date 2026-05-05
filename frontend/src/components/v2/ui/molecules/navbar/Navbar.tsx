@@ -1,9 +1,9 @@
 import { Link } from "react-router-dom";
-import { useAuth } from "@/auth/use-auth-hook";
 import { Button } from "@/components/ui/button";
+import { useAuth0 } from "@auth0/auth0-react";
 
 function Navbar() {
-  const { login, isAuthenticated } = useAuth();
+  const { loginWithRedirect, isAuthenticated } = useAuth0();
 
   return (
     <nav className="relative z-50 bg-card/80 dark:bg-card/90 backdrop-blur-md border-b border-border px-6 py-3 flex justify-between items-center">
@@ -38,7 +38,7 @@ function Navbar() {
             <Link to="/dashboard">Dashboard</Link>
           </Button>
         ) : (
-          <Button variant="default" onClick={() => login(true)}>
+          <Button variant="default" onClick={() => loginWithRedirect()}>
             Login
           </Button>
         )}

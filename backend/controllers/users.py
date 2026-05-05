@@ -10,7 +10,7 @@ from sqlalchemy.orm import Session
 
 from crud.user import user_crud
 from models.user import User, UserRole
-from schemas.user import UserCreate, UserUpdate
+from schemas.user import UserCreate, UserUpdate, UserRoleResponse
 
 
 
@@ -27,6 +27,16 @@ def register_user(db: Session, user_in: UserCreate) -> User:
 def get_me(current_user: User) -> User:
     """Get current user info."""
     return current_user
+
+
+def get_role_for_auth0_user(current_user: User, auth0_user_id: str) -> UserRoleResponse:
+    """Return role and internal user id for the given Auth0 subject; caller must be that user."""
+    if current_user.auth0_user_id != auth0_user_id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You can only read your own role",
+        )
+    return UserRoleResponse(role=current_user.role, user_id=current_user.id)
 
 
 def update_me(db: Session, current_user: User, user_in: UserUpdate) -> User:

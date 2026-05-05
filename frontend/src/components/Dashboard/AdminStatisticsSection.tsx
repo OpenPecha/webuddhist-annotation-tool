@@ -34,18 +34,9 @@ export const AdminStatisticsSection: React.FC = () => {
   }
 
   return (
-    <div className="space-y-10 animate-in fade-in slide-in-from-bottom-1 duration-500">
-      <header className="max-w-2xl">
-        <p className="font-display text-3xl font-semibold tracking-tight text-foreground md:text-4xl">
-          Statistics
-        </p>
-        <p className="mt-3 font-sans text-base leading-relaxed text-muted-foreground">
-          Corpus health, assignment flow, and rejection signals across the
-          annotation pipeline.
-        </p>
-      </header>
+  
 
-      <Card className="overflow-hidden border-border/80 bg-card/90 shadow-[0_24px_48px_-28px_oklch(0.35_0.04_65/0.25)] backdrop-blur-sm">
+      <Card className= " rounded-none overflow-hidden border-border/80 bg-card/90 shadow-[0_24px_48px_-28px_oklch(0.35_0.04_65/0.25)] backdrop-blur-sm">
         <CardHeader className="border-b border-border/60 bg-gradient-to-br from-card to-muted/20">
           <CardTitle className="flex items-center gap-2 font-display text-xl font-semibold">
             <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-lg bg-primary text-primary-foreground">
@@ -59,6 +50,5 @@ export const AdminStatisticsSection: React.FC = () => {
         </CardHeader>
         <CardContent className="p-6 md:p-8">{statsBody}</CardContent>
       </Card>
-    </div>
   );
 };

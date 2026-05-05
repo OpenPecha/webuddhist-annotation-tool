@@ -1,12 +1,12 @@
 import { useEffect, useCallback, useRef } from "react";
-import { useAuth } from "../auth/use-auth-hook";
 import { isTokenExpired } from "../utils/tokenUtils";
+import { useAuth0 } from "@auth0/auth0-react";
 
 /**
  * Custom hook to monitor token expiration and handle automatic logout
  */
 export const useTokenExpiration = () => {
-  const { logout, getToken, isAuthenticated } = useAuth();
+  const { logout, getAccessTokenSilently, isAuthenticated } = useAuth0();
   const intervalRef = useRef<NodeJS.Timeout | null>(null);
   const isCheckingRef = useRef(false);
 
@@ -17,7 +17,7 @@ export const useTokenExpiration = () => {
 
     try {
       // Try getToken first – it calls getAccessTokenSilently, which uses refresh token when access token is expired
-      const currentToken = await getToken();
+      const currentToken = await getAccessTokenSilently();
       if (!currentToken) {
         logout();
         return;
@@ -33,7 +33,7 @@ export const useTokenExpiration = () => {
     } finally {
       isCheckingRef.current = false;
     }
-  }, [getToken, logout, isAuthenticated]);
+  }, [getAccessTokenSilently, isAuthenticated]);
 
   const setupTokenExpirationCheck = useCallback(() => {
     // Clear any existing interval

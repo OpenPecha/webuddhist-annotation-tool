@@ -6,6 +6,7 @@ import type {
   UserStats,
   UserCreate,
   RegisterUserData,
+  UserRoleResponse,
 } from "./types";
 
 export const usersApi = {
@@ -19,6 +20,14 @@ export const usersApi = {
   },
   getCurrentUser: async (): Promise<UserResponse> => {
     return apiClient.get<UserResponse>("/users/me");
+  },
+
+  getUserRoleByAuth0Id: async (
+    auth0UserId: string
+  ): Promise<UserRoleResponse> => {
+    return apiClient.get<UserRoleResponse>(
+      `/users/auth0/${encodeURIComponent(auth0UserId)}/role`
+    );
   },
 
   // Update current user info

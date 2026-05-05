@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session
 from deps import get_db
 from auth import get_current_active_user, require_admin
 from models.user import User, UserRole
-from schemas.user import UserCreate, UserUpdate, UserResponse
+from schemas.user import UserCreate, UserUpdate, UserResponse, UserRoleResponse
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from controllers import users as users_controller
@@ -39,6 +39,18 @@ def register_user(
 def read_users_me(current_user: User = Depends(get_current_active_user)):
     """Get current user info."""
     return users_controller.get_me(current_user)
+
+
+@router.get(
+    "/auth0/{auth0_user_id}/role",
+    response_model=UserRoleResponse,
+)
+def read_user_role_by_auth0_id(
+    auth0_user_id: str,
+    current_user: User = Depends(get_current_active_user),
+):
+    """Return app role and user id for the given Auth0 user id (must match the authenticated user)."""
+    return users_controller.get_role_for_auth0_user(current_user, auth0_user_id)
 
 
 @router.put("/me", response_model=UserResponse)

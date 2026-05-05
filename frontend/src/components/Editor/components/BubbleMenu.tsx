@@ -4,7 +4,6 @@ import { Button } from "@/components/ui/button";
 import { IoClose, IoSearch, IoAdd } from "react-icons/io5";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import type { BubbleMenuProps } from "../types";
-import { useAuth } from "@/auth/use-auth-hook";
 import {
   STRUCTURAL_ANNOTATION_TYPES,
   POSITION_STRUCTURAL_TYPE_IDS,
@@ -56,7 +55,6 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
   const [isSearchFocused, setIsSearchFocused] = useState(false);
   const [selectedLevel, setSelectedLevel] = useState<string>("");
   const [customInput, setCustomInput] = useState("");
-  const { currentUser } = useAuth();
   const {
     getCustomOptions,
     addCustomAnnotation,

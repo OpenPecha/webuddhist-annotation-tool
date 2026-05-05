@@ -73,6 +73,8 @@ export {
   useToggleUserStatus,
 } from "./useUsers";
 
+export { useUserRole, usePermission } from "./usePermission";
+
 // OpenPecha Hooks
 export {
   useOpenPechaTexts,

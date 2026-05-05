@@ -43,4 +43,13 @@ class UserInfo(BaseModel):
     nickname: Optional[str] = None
     preferred_username: Optional[str] = None
     given_name: Optional[str] = None
-    family_name: Optional[str] = None 
+    family_name: Optional[str] = None
+
+
+class UserRoleResponse(BaseModel):
+    """Role and app user id for the Auth0 user specified (must match the authenticated subject)."""
+
+    model_config = ConfigDict(from_attributes=True)
+
+    role: UserRole
+    user_id: int 

@@ -5,15 +5,10 @@ import Navbar from "@/components/v2/ui/molecules/navbar/Navbar";
 import { ArrowUpRight } from "@/components/v2/ui/atoms/Icons/Icons";
 import Footbar from "@/pages/layout/Footbar";
 import { Link, Navigate } from "react-router-dom";
-import { useAuth } from "@/auth/use-auth-hook";
-import { useEffect } from "react";
+import { useAuth0 } from "@auth0/auth0-react";
 
 const Home = () => {
-  const { isAuthenticated, login, getToken } = useAuth();
-
-  useEffect(() => {
-    getToken();
-  }, [getToken]);
+  const { isAuthenticated, loginWithRedirect } = useAuth0();
 
   if (isAuthenticated) {
     return <Navigate to="/dashboard" replace />;
@@ -42,11 +37,11 @@ const Home = () => {
             variant="default"
             size="lg"
             className="cursor-pointer font-medium"
-            onClick={() => login(true)}
+            onClick={() => loginWithRedirect()}
           >
             Start Annotating
           </Button>
-          <Button variant="outline" size="lg" onClick={() => login(false)} asChild>
+          <Button variant="outline" size="lg" onClick={() => loginWithRedirect()} asChild>
             <span>Login</span>
           </Button>
           <Button variant="outline" size="lg" asChild>

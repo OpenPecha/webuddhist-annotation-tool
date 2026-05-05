@@ -1,18 +1,16 @@
 import { useState, useRef, useEffect } from "react";
 import AvatarWrapper from "./ui/custom-avatar";
-import { useAuth } from "@/auth/use-auth-hook";
-import { useCurrentUser } from "@/hooks";
-import { UserRole } from "@/api/types";
+import { useAuth0 } from "@auth0/auth0-react";
+import { usePermission } from "@/hooks";
 import { MdKeyboardArrowDown, MdLogout } from "react-icons/md";
 import { IoShieldCheckmark } from "react-icons/io5";
 import { Link } from "react-router-dom";
 
 function ProfileArea() {
   const [isOpen, setIsOpen] = useState(false);
-  const { currentUser } = useAuth();
-  const { data: appUser } = useCurrentUser();
+  const { user: currentUser } = useAuth0();
+  const { isAdmin } = usePermission();
   const dropdownRef = useRef<HTMLDivElement>(null);
-  const isAdmin = appUser?.role === UserRole.ADMIN;
 
   const toggleDropdown = () => setIsOpen(!isOpen);
 
@@ -74,7 +72,7 @@ function ProfileArea() {
             onClick={() => setIsOpen(false)}
           >
             <IoShieldCheckmark className="h-4 w-4 shrink-0 text-primary" />
-            <span>Administration</span>
+            <span>Admin dashboard</span>
           </Link>
         )}
         <Link

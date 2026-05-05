@@ -30,7 +30,7 @@ import {
   useAnnotationListHierarchical,
   useUploadAnnotationList,
   useDeleteAnnotationListByType,
-  useCurrentUser,
+  usePermission,
 } from "@/hooks";
 import { queryKeys } from "@/constants/queryKeys";
 import { useQueryClient } from "@tanstack/react-query";
@@ -38,7 +38,7 @@ import { EditableAnnotationList } from "./EditableAnnotationList";
 
 export const AdminAnnotationListSection: React.FC = () => {
   const queryClient = useQueryClient();
-  const { data: currentUser } = useCurrentUser();
+  const { role } = usePermission();
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const [dragActive, setDragActive] = useState(false);
   const [uploadResult, setUploadResult] =
@@ -48,7 +48,7 @@ export const AdminAnnotationListSection: React.FC = () => {
   >("select");
   const [selectedType, setSelectedType] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const isAdmin = currentUser?.role === "admin";
+  const isAdmin = role === "admin";
 
   // Fetch all annotation lists using custom hook
   const { data: allAnnotationTypes } = useAnnotationTypes();

@@ -140,7 +140,7 @@ function ActionButtons({
 
 
       {/* Revert Work button - only show for completed tasks (edit mode) */}
-      {isCompletedTask && onRevertWork && (
+      {canSubmit && isCompletedTask && onRevertWork && (
         <Button
           onClick={handleRevert}
           className="bg-yellow-600 hover:bg-yellow-700 text-white cursor-pointer"
@@ -169,7 +169,7 @@ function ActionButtons({
       )}
 
       {/* Undo button - remove all user annotations */}
-      {onUndoAnnotations && userAnnotationsCount > 0 && (
+      {canSubmit && onUndoAnnotations && userAnnotationsCount > 0 && (
         <Button
           onClick={handleUndo}
           className="bg-gray-600 hover:bg-gray-700 text-white cursor-pointer"

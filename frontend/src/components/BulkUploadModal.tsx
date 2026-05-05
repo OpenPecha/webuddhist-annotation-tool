@@ -12,8 +12,8 @@ import {
 } from "react-icons/io5";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { toast } from "sonner";
-import { useAuth } from "@/auth/use-auth-hook";
 import { useValidateBulkUpload, useUploadBulk } from "@/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
 
 interface FileValidationResult {
   filename: string;
@@ -73,7 +73,6 @@ const BulkUploadModal: React.FC<BulkUploadModalProps> = ({
     "select" | "validate" | "upload" | "results"
   >("select");
   const fileInputRef = useRef<HTMLInputElement>(null);
-  const { currentUser } = useAuth();
 
   // Validation mutation
   const validateMutation = useValidateBulkUpload();

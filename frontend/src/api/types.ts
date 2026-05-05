@@ -227,6 +227,12 @@ export interface UserResponse extends UserBase {
   updated_at?: string;
 }
 
+/** GET /users/auth0/{auth0_user_id}/role */
+export interface UserRoleResponse {
+  role: UserRole;
+  user_id: number;
+}
+
 export interface UserFilters extends PaginationParams {
   is_active?: boolean;
   role?: UserRole;

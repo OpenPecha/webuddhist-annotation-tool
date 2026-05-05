@@ -7,8 +7,10 @@ import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import BulkUploadModal from "../BulkUploadModal";
 import type { BulkUploadResponse } from "@/api/bulk-upload";
 import { LoadTextModal } from "./LoadTextModal";
-import { useStartWork, useMyWorkInProgress, useCurrentUser } from "@/hooks";
+import { useAuth0 } from "@auth0/auth0-react";
+import { useStartWork, useMyWorkInProgress, usePermission, useTexts } from "@/hooks";
 import { ListTodo } from "lucide-react";
+import { IoChevronBack, IoChevronForward } from "react-icons/io5";
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString("en-US", {
@@ -36,16 +38,26 @@ const StartWorkIcon = () => (
 
 export const RegularUserDashboard: React.FC = () => {
   const navigate = useNavigate();
-  const { data: currentUser } = useCurrentUser();
+  const { user } = useAuth0();
+  const { role } = usePermission();
   const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
   const [showLoadTextModal, setShowLoadTextModal] = useState(false);
   const [isLoadingText, setIsLoadingText] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
+  const [currentPage, setCurrentPage] = useState(1);
 
   const startWorkMutation = useStartWork();
+  const ITEMS_PER_PAGE = 10;
+  const skip = (currentPage - 1) * ITEMS_PER_PAGE;
 
   const { data: workInProgress = [], isLoading: isLoadingWorkInProgress } =
     useMyWorkInProgress();
+  const { data: paginatedTexts = [], isLoading: isLoadingTexts } = useTexts({
+    skip,
+    limit: ITEMS_PER_PAGE,
+  });
+  const hasPreviousPage = currentPage > 1;
+  const hasNextPage = paginatedTexts.length === ITEMS_PER_PAGE;
 
   const handleStartWork = () => {
     setIsLoadingText(true);
@@ -130,7 +142,7 @@ export const RegularUserDashboard: React.FC = () => {
       >
         <div className="p-6 border-b border-border">
           <h1 className="font-display text-xl font-semibold text-foreground">
-            Welcome, {currentUser?.full_name}
+            Welcome, {user?.name}
           </h1>
         </div>
 
@@ -149,7 +161,7 @@ export const RegularUserDashboard: React.FC = () => {
             <span className="ml-2">{startBusy ? "Starting…" : "Start Work"}</span>
           </Button>
 
-          {currentUser?.role === "user" && (
+          {role === "user" && (
             <Button
               size="lg"
               variant="outline"
@@ -177,7 +189,7 @@ export const RegularUserDashboard: React.FC = () => {
 
       <div className="flex-1 overflow-auto md:ml-0 ml-0">
         <div className="p-4 md:p-8 pt-20 md:pt-8">
-          {currentUser && (
+          {user && (
             <div className="mb-8">
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-1">
@@ -228,7 +240,7 @@ export const RegularUserDashboard: React.FC = () => {
                   <p className="text-muted-foreground">No tasks in progress.</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     Use <strong>Start Work</strong> in the sidebar to pick a text
-                    {currentUser.role === "user" ? (
+                    {role === "user" ? (
                       <>
                         , or <strong>Load Text</strong> to upload your own.
                       </>
@@ -236,6 +248,79 @@ export const RegularUserDashboard: React.FC = () => {
                       "."
                     )}
                   </p>
+                </div>
+              )}
+            </div>
+          )}
+
+          {role === "user" && (
+            <div className="mb-8">
+              <div className="mb-4">
+                <h2 className="font-display text-lg font-semibold text-foreground">
+                  All Documents
+                </h2>
+                <p className="text-sm text-muted-foreground">
+                  Browse all documents with pagination
+                </p>
+              </div>
+              {isLoadingTexts && (
+                <div className="text-center py-6">
+                  <div className="animate-spin rounded-full h-8 w-8 border-2 border-primary border-t-transparent mx-auto mb-4" />
+                  <p className="text-muted-foreground">Loading documents...</p>
+                </div>
+              )}
+              {!isLoadingTexts && paginatedTexts.length > 0 && (
+                <div className="space-y-3">
+                  {paginatedTexts.map((text) => (
+                    <div
+                      key={text.id}
+                      className="flex w-full items-center justify-between px-4 py-3 border border-border rounded-lg bg-card hover:bg-accent/50 transition-colors"
+                    >
+                      <div className="flex-1 min-w-0">
+                        <p className="font-medium text-foreground truncate">
+                          {text.title}
+                        </p>
+                        <p className="text-xs text-muted-foreground mt-0.5">
+                          Status: {text.status} • {formatDate(text.updated_at || text.created_at)}
+                        </p>
+                      </div>
+                      <Button
+                        size="sm"
+                        className="ml-4 shrink-0"
+                        onClick={() => navigate(`/task/${text.id}`)}
+                      >
+                        Open
+                      </Button>
+                    </div>
+                  ))}
+                  <div className="flex items-center justify-between pt-2">
+                    <p className="text-sm text-muted-foreground">Page {currentPage}</p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
+                        disabled={!hasPreviousPage}
+                      >
+                        <IoChevronBack className="w-4 h-4 mr-1" />
+                        Previous
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setCurrentPage((p) => p + 1)}
+                        disabled={!hasNextPage}
+                      >
+                        Next
+                        <IoChevronForward className="w-4 h-4 ml-1" />
+                      </Button>
+                    </div>
+                  </div>
+                </div>
+              )}
+              {!isLoadingTexts && paginatedTexts.length === 0 && (
+                <div className="text-center py-6 border border-dashed border-border rounded-lg bg-muted/30">
+                  <p className="text-muted-foreground">No documents found on this page.</p>
                 </div>
               )}
             </div>

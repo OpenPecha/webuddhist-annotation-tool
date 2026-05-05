@@ -1,11 +1,9 @@
 import "./App.css";
 import { BrowserRouter, Routes, Route, Navigate, useParams } from "react-router-dom";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
-import { AuthProvider } from "./auth/AuthProvider";
 import { Suspense, lazy, useEffect, useState } from "react";
 import { Toaster } from "@/components/ui/sonner";
 import { FullScreenLoading, AppLoading } from "@/components/ui/loading";
-import { useAuth } from "./auth/use-auth-hook";
 import { useAnnotationColors } from "./hooks/use-annotation-colors";
 
 import { UserbackProvider } from "./providers/UserbackProvider";
@@ -34,12 +32,10 @@ const queryClient = new QueryClient();
 
 
 function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
-  const { isAuthenticated } = useAuth();
-  const { user } = useAuth0();
+  const { user,isAuthenticated } = useAuth0();
   const [isUserSynced, setIsUserSynced] = useState(false);
   const [syncError, setSyncError] = useState<string | null>(null);
   const { isLoaded: colorsLoaded } = useAnnotationColors();
-
   // Ensure user exists in DB before loading protected content
   useEffect(() => {
     if (!isAuthenticated || !user?.sub) {
@@ -71,9 +67,7 @@ function Layout({ children }: Readonly<{ children: React.ReactNode }>) {
     };
   }, [isAuthenticated, user?.sub, user?.nickname, user?.name, user?.email, user?.picture]);
 
-  if (!isAuthenticated) {
-    return <Welcome />;
-  }
+  
 
   if (!isUserSynced) {
     if (syncError) {
@@ -147,13 +141,10 @@ function App() {
   return (
       <QueryClientProvider client={queryClient}>
           <BrowserRouter>
-    <AuthProvider>
         <UserbackProvider>
-
             <AppContent />
             <Toaster />
         </UserbackProvider>
-    </AuthProvider>
           </BrowserRouter>
       </QueryClientProvider>
   );
