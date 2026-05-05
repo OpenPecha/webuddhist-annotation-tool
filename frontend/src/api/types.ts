@@ -222,6 +222,7 @@ export interface UserUpdate {
 
 export interface UserResponse extends UserBase {
   id: number;
+  auth0_user_id?: string;
   role: UserRole;
   is_active: boolean;
   created_at: string;

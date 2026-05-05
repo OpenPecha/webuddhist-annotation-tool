@@ -1,5 +1,6 @@
 import React, { useState, Suspense, useEffect, type ReactNode } from "react";
 import { AdminSidebar } from "./AdminSidebar";
+import type { AdminTab } from "./AdminSidebar";
 import { Loading } from "@/components/ui/loading";
 
 const AdminTaskSection = React.lazy(() =>
@@ -17,11 +18,14 @@ const AdminUsersSection = React.lazy(() =>
     default: module.AdminUsersSection,
   }))
 );
+const AdminAnnotationRecordsSection = React.lazy(() =>
+  import("./AdminAnnotationRecordsSection").then((module) => ({
+    default: module.AdminAnnotationRecordsSection,
+  }))
+);
 
 export const AdminDashboard: React.FC = () => {
-  const [activeAdminTab, setActiveAdminTab] = useState<
-    "statistics" | "tasks" | "users"
-  >("statistics");
+  const [activeAdminTab, setActiveAdminTab] = useState<AdminTab>("statistics");
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
@@ -29,6 +33,7 @@ export const AdminDashboard: React.FC = () => {
       import("./AdminTaskSection");
       import("./AdminStatisticsSection");
       import("./AdminUsersSection");
+      import("./AdminAnnotationRecordsSection");
     }, 100);
     return () => clearTimeout(timeoutId);
   }, []);
@@ -44,6 +49,9 @@ export const AdminDashboard: React.FC = () => {
         break;
       case "users":
         section = <AdminUsersSection />;
+        break;
+      case "annotation-records":
+        section = <AdminAnnotationRecordsSection />;
         break;
       default:
         section = <AdminStatisticsSection />;

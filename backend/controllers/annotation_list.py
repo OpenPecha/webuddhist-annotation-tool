@@ -1,6 +1,6 @@
 """Annotation list route actions. All functions take db, current_user, and request data; return result or raise HTTPException."""
 
-from typing import List
+from typing import List, Optional
 
 from fastapi import HTTPException, status
 from sqlalchemy.orm import Session
@@ -13,6 +13,24 @@ from schemas.annotation_list import (
     HierarchicalJSONInput,
     AnnotationListBulkCreateResponse,
 )
+
+
+def get_annotation_lists(
+    db: Session,
+    current_user: User,
+    skip: int = 0,
+    limit: int = 100,
+    type_filter: Optional[str] = None,
+    created_by: Optional[str] = None,
+):
+    """Get annotation list items with optional filters."""
+    return annotation_list_crud.get_multi(
+        db=db,
+        skip=skip,
+        limit=limit,
+        type_filter=type_filter,
+        created_by=created_by,
+    )
 
 
 async def upload_annotation_list_file(

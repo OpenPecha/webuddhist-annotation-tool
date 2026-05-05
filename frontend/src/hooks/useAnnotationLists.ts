@@ -1,5 +1,12 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { annotationListApi, type HierarchicalJSONOutput, type AnnotationListUploadResponse, type AnnotationListCreate, type AnnotationListUpdate } from "@/api/annotation_list";
+import {
+  annotationListApi,
+  type HierarchicalJSONOutput,
+  type AnnotationListUploadResponse,
+  type AnnotationListCreate,
+  type AnnotationListUpdate,
+  type AnnotationListResponse,
+} from "@/api/annotation_list";
 import { queryKeys } from "@/constants/queryKeys";
 import { toast } from "sonner";
 
@@ -37,6 +44,15 @@ export const useAnnotationListHierarchical = ({
     queryFn: () => type_id ? annotationListApi.getByTypeHierarchical(type_id) : Promise.resolve(null),
     enabled: enabled && !!type_id,
     staleTime: 5 * 60 * 1000, // 5 minutes
+    retry: 2,
+  });
+};
+
+export const useAllAnnotationLists = () => {
+  return useQuery<AnnotationListResponse[]>({
+    queryKey: queryKeys.annotationLists.all,
+    queryFn: () => annotationListApi.getAll(),
+    staleTime: 5 * 60 * 1000,
     retry: 2,
   });
 };

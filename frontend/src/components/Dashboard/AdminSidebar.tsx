@@ -4,15 +4,18 @@ import {
   IoBarChart,
   IoList,
   IoPeople,
+  IoDocumentText,
   IoChevronBack,
   IoChevronForward,
 } from "react-icons/io5";
 
+export type AdminTab = "statistics" | "tasks" | "users" | "annotation-records";
+
 interface AdminSidebarProps {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
-  activeAdminTab: "statistics" | "tasks" | "users";
-  setActiveAdminTab: (tab: "statistics" | "tasks" | "users") => void;
+  activeAdminTab: AdminTab;
+  setActiveAdminTab: (tab: AdminTab) => void;
 }
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
@@ -135,6 +138,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             <IoPeople className="h-4 w-4" />,
             "Users",
             "Roles and account status"
+          )}
+          {navBtn(
+            "annotation-records",
+            <IoDocumentText className="h-4 w-4" />,
+            "Annotation List",
+            "Filter by creator, date, and type"
           )}
         </nav>
       </div>

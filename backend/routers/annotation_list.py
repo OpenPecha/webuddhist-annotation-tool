@@ -1,8 +1,8 @@
 """Annotation lists API routes. Thin layer: dependencies and controller delegation."""
 
-from typing import List
+from typing import List, Optional
 
-from fastapi import APIRouter, Depends, File, UploadFile
+from fastapi import APIRouter, Depends, File, Query, UploadFile
 from sqlalchemy.orm import Session
 
 from deps import get_db
@@ -19,6 +19,26 @@ from schemas.annotation_list import (
 from controllers import annotation_list as annotation_list_controller
 
 router = APIRouter(prefix="/annotation-lists", tags=["Annotation Lists"])
+
+
+@router.get("/", response_model=List[AnnotationListResponse])
+def get_annotation_lists(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    type: Optional[str] = Query(None),
+    created_by: Optional[str] = Query(None),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Get annotation lists with optional type and creator filtering."""
+    return annotation_list_controller.get_annotation_lists(
+        db=db,
+        current_user=current_user,
+        skip=skip,
+        limit=limit,
+        type_filter=type,
+        created_by=created_by,
+    )
 
 
 @router.post("/upload", response_model=AnnotationListBulkCreateResponse, status_code=201)
