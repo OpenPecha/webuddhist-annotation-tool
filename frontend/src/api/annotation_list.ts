@@ -31,7 +31,8 @@ export interface HierarchicalJSONOutput {
 
 export interface AnnotationListResponse {
   id: string;
-  type: string;
+  type?: string;
+  type_id?: string;
   title: string;
   level?: string;
   parent_id?: string;

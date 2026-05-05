@@ -8,7 +8,7 @@ import {
 } from "@/components/ui/card";
 import { IoList } from "react-icons/io5";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
-import { useAllAnnotationLists, useUsers } from "@/hooks";
+import { useAllAnnotationLists, useAnnotationTypes, useUsers } from "@/hooks";
 import { Button } from "@/components/ui/button";
 
 const formatDate = (iso: string) => {
@@ -38,6 +38,7 @@ export const AdminAnnotationRecordsSection: React.FC = () => {
   const [typeFilter, setTypeFilter] = useState("all");
   const { data: annotationLists = [], isLoading, error } = useAllAnnotationLists();
   const { data: users = [] } = useUsers();
+  const { data: annotationTypes = [] } = useAnnotationTypes();
 
   const userNameByAuth0Id = useMemo(() => {
     const map = new Map<string, string>();
@@ -54,15 +55,32 @@ export const AdminAnnotationRecordsSection: React.FC = () => {
     return userNameByAuth0Id.get(createdBy) || createdBy;
   };
 
+  const typeNameById = useMemo(() => {
+    const map = new Map<string, string>();
+    annotationTypes.forEach((item) => {
+      map.set(item.id, item.name);
+    });
+    return map;
+  }, [annotationTypes]);
+
+  const getTypeDisplayName = (item: { type?: string; type_id?: string }) => {
+    if (item.type) return item.type;
+    if (item.type_id) {
+      return typeNameById.get(item.type_id) || "-";
+    }
+    return "-";
+  };
+
   const availableTypes = useMemo(() => {
     const values = new Set<string>();
     annotationLists.forEach((item) => {
-      if (item.type) {
-        values.add(item.type);
+      const typeName = getTypeDisplayName(item);
+      if (typeName !== "-") {
+        values.add(typeName);
       }
     });
     return Array.from(values).sort((a, b) => a.localeCompare(b));
-  }, [annotationLists]);
+  }, [annotationLists, typeNameById]);
 
   const availableCreators = useMemo(() => {
     const values = new Set<string>();
@@ -80,18 +98,19 @@ export const AdminAnnotationRecordsSection: React.FC = () => {
       const createdByMatches =
         createdByFilter === "all" ||
         getCreatorDisplayName(item.created_by) === createdByFilter;
-      const typeMatches = typeFilter === "all" || item.type === typeFilter;
+      const typeMatches =
+        typeFilter === "all" || getTypeDisplayName(item) === typeFilter;
       const createdAtMatches =
         !createdAtFilter || toDateInputValue(item.created_at) === createdAtFilter;
       return createdByMatches && typeMatches && createdAtMatches;
     });
-  }, [annotationLists, createdByFilter, typeFilter, createdAtFilter]);
+  }, [annotationLists, createdByFilter, typeFilter, createdAtFilter, typeNameById]);
 
   const handleExportFiltered = () => {
     const header = ["title", "type", "created_by", "created_at"];
     const rows = filteredLists.map((item) => [
       item.title || "",
-      item.type || "",
+      getTypeDisplayName(item),
       getCreatorDisplayName(item.created_by),
       item.created_at || "",
     ]);
@@ -172,7 +191,9 @@ export const AdminAnnotationRecordsSection: React.FC = () => {
             {filteredLists.map((item) => (
               <tr key={item.id} className="border-b border-gray-100 hover:bg-gray-50">
                 <td className="px-4 py-3 text-sm text-gray-900">{item.title}</td>
-                <td className="px-4 py-3 text-sm text-gray-700">{item.type || "-"}</td>
+                <td className="px-4 py-3 text-sm text-gray-700">
+                  {getTypeDisplayName(item)}
+                </td>
                 <td className="px-4 py-3 text-sm text-gray-700">
                   {getCreatorDisplayName(item.created_by)}
                 </td>

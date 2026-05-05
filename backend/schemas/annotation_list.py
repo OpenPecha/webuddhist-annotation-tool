@@ -32,6 +32,7 @@ class AnnotationListResponse(AnnotationListBase):
     model_config = ConfigDict(from_attributes=True)
     
     id: str
+    type_id: Optional[str] = None
     parent_id: Optional[str] = None
     created_by: Optional[str] = None
     created_at: datetime
@@ -44,6 +45,7 @@ class AnnotationListResponse(AnnotationListBase):
             # Create a dict with all attributes plus the type from relationship
             data = {
                 'id': obj.id,
+                'type_id': obj.type_id,
                 'title': obj.title,
                 'type': obj.annotation_type.name,
                 'level': obj.level,
