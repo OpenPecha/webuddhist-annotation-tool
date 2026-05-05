@@ -15,7 +15,13 @@ from crud.user_rejected_text import user_rejected_text_crud
 from models.user import User
 from models.text import VALID_STATUSES, INITIALIZED, ANNOTATED, REVIEWED, SKIPPED, PROGRESS
 from models.user_rejected_text import UserRejectedText
-from schemas.text import TextCreate, TextUpdate, TaskSubmissionResponse, RecentActivityWithReviewCounts
+from schemas.text import (
+    TextCreate,
+    TextUpdate,
+    TaskSubmissionResponse,
+    RecentActivityWithReviewCounts,
+    TextPermissionUpsertRequest,
+)
 from schemas.annotation import AnnotationCreate
 from schemas.combined import TextWithAnnotations
 from schemas.user_rejected_text import RejectedTextWithDetails
@@ -399,10 +405,16 @@ def revert_work(db: Session, current_user: User, text_id: int) -> dict:
     return {"message": f"Work reverted successfully. Removed {deleted_count} annotations."}
 
 
-def get_my_work_in_progress(db: Session, current_user: User) -> List:
-    """Get all texts the current user is working on."""
+def get_my_work_in_progress(
+    db: Session, current_user: User, skip: int = 0, limit: int = 100
+) -> List:
+    """Get all texts the current user can write to (owned, assigned, or shared-write)."""
     return text_crud.get_user_work_in_progress(
-        db=db, user_id=current_user.id, user_role=current_user.role.value
+        db=db,
+        user_id=current_user.id,
+        user_role=current_user.role.value,
+        skip=skip,
+        limit=limit,
     )
 
 
@@ -562,6 +574,12 @@ def read_text_with_annotations(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Text not found",
         )
+    text.current_user_permission = text_crud.get_effective_text_permission(
+        db=db,
+        user_id=current_user.id,
+        text=text,
+        role=current_user.role.value,
+    )
     return text
 
 
@@ -626,3 +644,76 @@ def soft_delete_my_text(db: Session, current_user: User, text_id: int):
         )
     text_crud.soft_delete(db=db, text_id=text_id)
     return {"message": "Text deleted successfully"}
+
+
+def _ensure_share_manager(current_user: User, text) -> None:
+    if current_user.role.value == "admin":
+        return
+    if text.uploaded_by != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only text owner can manage sharing permissions",
+        )
+
+
+def upsert_text_permission(
+    db: Session,
+    current_user: User,
+    text_id: int,
+    permission_in: TextPermissionUpsertRequest,
+):
+    text = text_crud.get(db=db, text_id=text_id)
+    if not text:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Text not found",
+        )
+    _ensure_share_manager(current_user, text)
+    if permission_in.grantee_user_id == text.uploaded_by:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Owner already has write permission",
+        )
+    return text_crud.upsert_permission(
+        db=db,
+        text_id=text_id,
+        owner_user_id=current_user.id,
+        grantee_user_id=permission_in.grantee_user_id,
+        permission=permission_in.permission,
+    )
+
+
+def list_text_permissions(db: Session, current_user: User, text_id: int):
+    text = text_crud.get(db=db, text_id=text_id)
+    if not text:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Text not found",
+        )
+    _ensure_share_manager(current_user, text)
+    permissions = text_crud.list_permissions_for_text(db=db, text_id=text_id)
+    if not permissions:
+        # keep return shape stable for clients
+        return []
+    return permissions
+
+
+def delete_text_permission(
+    db: Session, current_user: User, text_id: int, grantee_user_id: int
+):
+    text = text_crud.get(db=db, text_id=text_id)
+    if not text:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Text not found",
+        )
+    _ensure_share_manager(current_user, text)
+    removed = text_crud.remove_permission(
+        db=db, text_id=text_id, grantee_user_id=grantee_user_id
+    )
+    if not removed:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Permission entry not found",
+        )
+    return {"message": "Permission removed"}

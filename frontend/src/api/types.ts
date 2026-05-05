@@ -68,6 +68,7 @@ export interface TextResponse extends TextBase {
   reviewer?: UserInfo;
   uploader?: UserInfo;
   annotation_type_id?: string;
+  current_user_permission?: "read" | "write";
   /** For TEI XML upload: annotation types created (e.g. ["pos", "tei_editorial"]) for filter selection */
   annotation_types_created?: string[];
   /** Plain text from TEI div subtype=diplomatic (optional, may be omitted in list responses) */
@@ -241,6 +242,22 @@ export interface UserFilters extends PaginationParams {
 // Combined types
 export interface TextWithAnnotations extends TextResponse {
   annotations: AnnotationResponse[];
+}
+
+export interface TextPermissionUpsertRequest {
+  grantee_user_id: number;
+  permission: "read" | "write";
+}
+
+export interface TextPermissionResponse {
+  id: number;
+  text_id: number;
+  owner_user_id: number;
+  grantee_user_id: number;
+  permission: "read" | "write";
+  created_at: string;
+  updated_at?: string;
+  grantee?: UserInfo;
 }
 
 export interface TaskSubmissionResponse {

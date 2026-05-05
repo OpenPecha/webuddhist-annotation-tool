@@ -1,4 +1,4 @@
-import React, { useState, type ReactNode } from "react";
+import { useState, type ReactNode } from "react";
 import {
   Card,
   CardContent,
@@ -16,7 +16,7 @@ import {
   IoCreateOutline,
 } from "react-icons/io5";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
-import type { UserRole } from "@/api/types";
+import type { UserRole, UserResponse } from "@/api/types";
 import {
   useUsers,
   useSearchUsers,
@@ -25,6 +25,86 @@ import {
 } from "@/hooks";
 
 type UserManagementProps = Readonly<{ className?: string }>;
+
+type UserTableRowProps = Readonly<{
+  user: UserResponse;
+  isUpdatingRole: boolean;
+  isUpdatingStatus: boolean;
+  onRoleChange: (userId: number, newRole: UserRole) => void;
+  onStatusToggle: (userId: number, currentStatus: boolean) => void;
+}>;
+
+function getRoleIcon(role: UserRole) {
+  switch (role) {
+    case "admin":
+      return <IoShieldCheckmark className="w-4 h-4" />;
+    case "reviewer":
+      return <IoCreateOutline className="w-4 h-4" />;
+    case "annotator":
+      return <IoPeople className="w-4 h-4" />;
+    case "user":
+      return <IoEye className="w-4 h-4" />;
+    default:
+      return <IoEye className="w-4 h-4" />;
+  }
+}
+
+function UserTableRow({
+  user,
+  isUpdatingRole,
+  isUpdatingStatus,
+  onRoleChange,
+  onStatusToggle,
+}: UserTableRowProps) {
+  return (
+    <tr className="hover:bg-gray-50 transition-colors">
+      <td className="px-4 py-3">
+        <div className="flex items-center gap-2">
+          {getRoleIcon(user.role)}
+          <span className="font-medium text-gray-900">
+            {user.full_name || user.username}
+          </span>
+        </div>
+      </td>
+      <td className="px-4 py-3 text-sm text-gray-600">{user.email}</td>
+      <td className="px-4 py-3 text-sm text-gray-500">@{user.username}</td>
+      <td className="px-4 py-3">
+        <select
+          value={user.role}
+          onChange={(e) => onRoleChange(user.id, e.target.value as UserRole)}
+          disabled={isUpdatingRole}
+          className="w-32 pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="admin">Admin</option>
+          <option value="reviewer">Reviewer</option>
+          <option value="annotator">Annotator</option>
+          <option value="user">User</option>
+        </select>
+      </td>
+      <td className="px-4 py-3">
+        <span
+          className={`inline-flex items-center rounded-full px-2.5 py-1 text-xs font-medium ${
+            user.is_active
+              ? "bg-green-100 text-green-700"
+              : "bg-gray-100 text-gray-600"
+          }`}
+        >
+          {user.is_active ? "Active" : "Inactive"}
+        </span>
+      </td>
+      <td className="px-4 py-3">
+        <Button
+          size="sm"
+          variant={user.is_active ? "destructive" : "outline"}
+          onClick={() => onStatusToggle(user.id, user.is_active)}
+          disabled={isUpdatingStatus}
+        >
+          {user.is_active ? "Deactivate" : "Activate"}
+        </Button>
+      </td>
+    </tr>
+  );
+}
 
 export function UserManagement({ className }: UserManagementProps) {
   const [searchQuery, setSearchQuery] = useState("");
@@ -100,21 +180,6 @@ export function UserManagement({ className }: UserManagementProps) {
     setSearchQuery(query);
   };
 
-  const getRoleIcon = (role: UserRole) => {
-    switch (role) {
-      case "admin":
-        return <IoShieldCheckmark className="w-4 h-4" />;
-      case "reviewer":
-        return <IoCreateOutline className="w-4 h-4" />;
-      case "annotator":
-        return <IoPeople className="w-4 h-4" />;
-      case "user":
-        return <IoEye className="w-4 h-4" />;
-      default:
-        return <IoEye className="w-4 h-4" />;
-    }
-  };
-
   const displayUsers = searchQuery.length > 0 ? searchResults : users;
 
   if (error) {
@@ -149,49 +214,62 @@ export function UserManagement({ className }: UserManagementProps) {
     );
   } else {
     usersListBody = (
-      <div className="space-y-4">
-        {displayUsers.map((user) => (
-          <div
-            key={user.id}
-            className="flex items-center justify-between p-4 bg-gray-50 rounded-lg border border-gray-200 hover:bg-gray-100 transition-colors"
-          >
-            <div className="flex items-center space-x-4">
-              <div className="flex items-center space-x-2">
-                {getRoleIcon(user.role)}
-                <div>
-                  <div className="font-medium text-gray-900">
-                    {user.full_name || user.username}
-                  </div>
-                  <div className="text-sm text-gray-500">{user.email}</div>
-                  <div className="text-xs text-gray-400">@{user.username}</div>
-                </div>
-              </div>
-            </div>
-            <div className="flex items-center space-x-2">
-              <select
-                value={user.role}
-                onChange={(e) =>
-                  handleRoleChange(user.id, e.target.value as UserRole)
-                }
-                disabled={updateUserMutation.isPending}
-                className="w-32 pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+      <div className="overflow-x-auto rounded-lg border border-gray-200">
+        <table className="w-full border-collapse">
+          <caption className="sr-only">User management table</caption>
+          <thead>
+            <tr className="bg-gray-50 border-b border-gray-200">
+              <th
+                scope="col"
+                className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide"
               >
-                <option value="admin">Admin</option>
-                <option value="reviewer">Reviewer</option>
-                <option value="annotator">Annotator</option>
-                <option value="user">User</option>
-              </select>
-              <Button
-                size="sm"
-                variant={user.is_active ? "destructive" : "outline"}
-                onClick={() => handleStatusToggle(user.id, user.is_active)}
-                disabled={toggleUserStatusMutation.isPending}
+                Name
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide"
               >
-                {user.is_active ? "Deactivate" : "Activate"}
-              </Button>
-            </div>
-          </div>
-        ))}
+                Email
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide"
+              >
+                Username
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide"
+              >
+                Role
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide"
+              >
+                Status
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 text-left text-xs font-semibold text-gray-600 uppercase tracking-wide"
+              >
+                Actions
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {displayUsers.map((user) => (
+              <UserTableRow
+                key={user.id}
+                user={user}
+                isUpdatingRole={updateUserMutation.isPending}
+                isUpdatingStatus={toggleUserStatusMutation.isPending}
+                onRoleChange={handleRoleChange}
+                onStatusToggle={handleStatusToggle}
+              />
+            ))}
+          </tbody>
+        </table>
       </div>
     );
   }

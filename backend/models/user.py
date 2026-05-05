@@ -33,4 +33,16 @@ class User(Base):
     uploaded_texts = relationship("Text", back_populates="uploader", foreign_keys="[Text.uploaded_by]")
     rejected_texts = relationship("UserRejectedText", back_populates="user", cascade="all, delete-orphan")
     annotation_reviews = relationship("AnnotationReview", back_populates="reviewer", cascade="all, delete-orphan")
+    granted_text_permissions = relationship(
+        "TextPermission",
+        foreign_keys="[TextPermission.owner_user_id]",
+        back_populates="owner",
+        cascade="all, delete-orphan",
+    )
+    received_text_permissions = relationship(
+        "TextPermission",
+        foreign_keys="[TextPermission.grantee_user_id]",
+        back_populates="grantee",
+        cascade="all, delete-orphan",
+    )
     

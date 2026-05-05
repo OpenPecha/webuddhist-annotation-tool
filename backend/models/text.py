@@ -41,3 +41,4 @@ class Text(Base):
     annotator = relationship("User", back_populates="annotated_texts", foreign_keys=[annotator_id])
     uploader = relationship("User", back_populates="uploaded_texts", foreign_keys=[uploaded_by])
     rejected_by_users = relationship("UserRejectedText", back_populates="text", cascade="all, delete-orphan")
+    permissions = relationship("TextPermission", back_populates="text", cascade="all, delete-orphan")

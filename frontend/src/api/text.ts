@@ -14,6 +14,8 @@ import type {
   AdminTextStatistics,
   RecentActivityWithReviewCounts,
   DiplomaticTextResponse,
+  TextPermissionUpsertRequest,
+  TextPermissionResponse,
 } from "./types";
 
 // Text API client
@@ -131,8 +133,10 @@ export const textApi = {
   },
 
   // Get all texts that the current user is working on
-  getMyWorkInProgress: async (): Promise<TextResponse[]> => {
-    return apiClient.get<TextResponse[]>("/texts/my-work-in-progress");
+  getMyWorkInProgress: async (
+    filters: { skip?: number; limit?: number } = {}
+  ): Promise<TextResponse[]> => {
+    return apiClient.get<TextResponse[]>("/texts/my-work-in-progress", filters);
   },
 
   // Submit task - mark text as annotated and get next task (for annotators)
@@ -191,5 +195,23 @@ export const textApi = {
       message: "Work cancelled, annotations deleted, and text skipped",
       nextText,
     };
+  },
+
+  listTextPermissions: async (textId: number): Promise<TextPermissionResponse[]> => {
+    return apiClient.get<TextPermissionResponse[]>(`/texts/${textId}/permissions`);
+  },
+
+  upsertTextPermission: async (
+    textId: number,
+    data: TextPermissionUpsertRequest
+  ): Promise<TextPermissionResponse> => {
+    return apiClient.post<TextPermissionResponse>(`/texts/${textId}/permissions`, data);
+  },
+
+  deleteTextPermission: async (
+    textId: number,
+    granteeUserId: number
+  ): Promise<{ message: string }> => {
+    return apiClient.delete<{ message: string }>(`/texts/${textId}/permissions/${granteeUserId}`);
   },
 };

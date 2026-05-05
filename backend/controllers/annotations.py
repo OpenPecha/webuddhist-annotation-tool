@@ -43,25 +43,18 @@ def read_annotations(
 def create_annotation(
     db: Session, current_user: User, annotation_in: AnnotationCreate
 ):
-    """Create new annotation. Annotator or user who uploaded the text."""
-    if current_user.role.value not in ("admin", "annotator"):
-        if current_user.role.value == "user":
-            text = text_crud.get(db=db, text_id=annotation_in.text_id)
-            if not text:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Text not found",
-                )
-            if text.uploaded_by != current_user.id:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="You can only annotate texts you uploaded",
-                )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Role '{current_user.role.value}' is not allowed to create annotations",
-            )
+    """Create new annotation when current user has write permission on the text."""
+    text = text_crud.get(db=db, text_id=annotation_in.text_id)
+    if not text:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Text not found",
+        )
+    if not text_crud.can_write_text(db, current_user.id, text, current_user.role.value):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have write permission for this text",
+        )
 
     # Ensure line-break/page-break annotation types exist in DB (create on first add)
     if annotation_in.annotation_type in POSITION_ANNOTATION_TYPES:
@@ -152,10 +145,16 @@ def update_annotation(
             detail="Annotation not found",
         )
 
-    if annotation.annotator_id != current_user.id and current_user.role.value != "admin":
+    text = text_crud.get(db=db, text_id=annotation.text_id)
+    if not text:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Text not found",
+        )
+    if not text_crud.can_write_text(db, current_user.id, text, current_user.role.value):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions",
+            detail="You do not have write permission for this text",
         )
     if annotation_crud.is_annotation_agreed(db=db, annotation_id=annotation_id):
         raise HTTPException(
@@ -195,10 +194,16 @@ def delete_annotation(db: Session, current_user: User, annotation_id: int) -> No
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Annotation not found",
         )
-    if annotation.annotator_id and annotation.annotator_id != current_user.id and current_user.role.value != "admin":
+    text = text_crud.get(db=db, text_id=annotation.text_id)
+    if not text:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Text not found",
+        )
+    if not text_crud.can_write_text(db, current_user.id, text, current_user.role.value):
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail="Not enough permissions",
+            detail="You do not have write permission for this text",
         )
     if annotation_crud.is_annotation_agreed(db=db, annotation_id=annotation_id):
         raise HTTPException(
@@ -242,25 +247,18 @@ def validate_annotation_positions(
 def bulk_create_annotations(
     db: Session, current_user: User, body: BulkCreateAnnotationsRequest
 ) -> dict:
-    """Create annotations at all given spans in one request (apply to all). Same permission as create_annotation."""
-    if current_user.role.value not in ("admin", "annotator"):
-        if current_user.role.value == "user":
-            text = text_crud.get(db=db, text_id=body.text_id)
-            if not text:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Text not found",
-                )
-            if text.uploaded_by != current_user.id:
-                raise HTTPException(
-                    status_code=status.HTTP_403_FORBIDDEN,
-                    detail="You can only annotate texts you uploaded",
-                )
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail=f"Role '{current_user.role.value}' is not allowed to create annotations",
-            )
+    """Create annotations at all given spans when user can write to the text."""
+    text = text_crud.get(db=db, text_id=body.text_id)
+    if not text:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Text not found",
+        )
+    if not text_crud.can_write_text(db, current_user.id, text, current_user.role.value):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have write permission for this text",
+        )
 
     spans_tuples = [(s.start_position, s.end_position) for s in body.spans]
     created = annotation_crud.create_many(
@@ -287,12 +285,11 @@ def bulk_delete_annotations(
             status_code=status.HTTP_404_NOT_FOUND,
             detail="Text not found",
         )
-    if current_user.role.value not in ("admin", "annotator"):
-        if current_user.role.value == "user" and text.uploaded_by != current_user.id:
-            raise HTTPException(
-                status_code=status.HTTP_403_FORBIDDEN,
-                detail="Not enough permissions",
-            )
+    if not text_crud.can_write_text(db, current_user.id, text, current_user.role.value):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="You do not have write permission for this text",
+        )
     deleted_count = annotation_crud.delete_by_criteria(
         db=db,
         text_id=body.text_id,

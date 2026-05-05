@@ -17,6 +17,9 @@ import {
   useAnnotationListHierarchical,
   usePermission,
   useSoftDeleteMyText,
+  useTextPermissions,
+  useUpsertTextPermission,
+  useDeleteTextPermission,
 } from "@/hooks";
 import {
   convertApiAnnotationsSync,
@@ -30,12 +33,12 @@ import { exportAsJsonFile, exportAsTeiXmlFile } from "@/utils/exportAnnotation";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
 import { useQueryClient } from "@tanstack/react-query";
 import { queryKeys } from "@/constants/queryKeys";
+import { toast } from "sonner";
 
 const Index = () => {
   const { textId } = useParams<{ textId: string }>();
   const navigate = useNavigate();
   const { userId, role: userRole } = usePermission();
-  const isViewer = userRole === "user";
   const currentUserId = userId ?? null;
 
   /** Pending while filter changes are applied (select all / deselect all / toggle type) */
@@ -113,9 +116,17 @@ const Index = () => {
     annotationLabelsInText.size === 0 ||
     [...annotationLabelsInText].every((l) => selectedAnnotationTypes.has(l));
 
+  const hasWritePermission = textData?.current_user_permission === "write";
+  const forceReadOnlyFromNavigation = Boolean(
+    (location.state as { forceReadOnly?: boolean } | null)?.forceReadOnly
+  );
   // Determine if text should be read-only
   const isReadOnly =
-    isViewer || allAnnotationsAccepted || !textData || !allSegmentsSelected;
+    forceReadOnlyFromNavigation ||
+    !hasWritePermission ||
+    allAnnotationsAccepted ||
+    !textData ||
+    !allSegmentsSelected;
 
   /**
    * Custom hook: Annotation CRUD operations
@@ -162,6 +173,17 @@ const Index = () => {
   const softDeleteMutation = useSoftDeleteMyText({
     onSuccess: () => navigate("/"),
   });
+  const isShareManager = Boolean(
+    textData &&
+      currentUserId !== null &&
+      (textData.uploaded_by === currentUserId || userRole === "admin")
+  );
+  const { data: sharedPermissions = [] } = useTextPermissions(
+    parsedTextId ?? 0,
+    isShareManager
+  );
+  const upsertTextPermissionMutation = useUpsertTextPermission(parsedTextId ?? 0);
+  const deleteTextPermissionMutation = useDeleteTextPermission(parsedTextId ?? 0);
 
   /**
    * Effect: Add annotation types from XML upload to selected filter so markings show
@@ -194,7 +216,7 @@ const Index = () => {
    * Wrapper for addAnnotation that handles selectedText state
    */
   const handleAddAnnotation = (type: string, name?: string, level?: string) => {
-    if (isViewer) return;
+    if (forceReadOnlyFromNavigation || !hasWritePermission) return;
     if (!selectedText) return;
     addAnnotationFn(selectedText, type, name, level);
     setSelectedText(null);
@@ -202,8 +224,54 @@ const Index = () => {
 
   /** On text select: always allow selection (for adding annotations). Text content editing is controlled by isReadOnly. */
   const handleTextSelect = (selection: { text: string; start: number; end: number } | null) => {
-    if (isViewer) return;
+    if (forceReadOnlyFromNavigation || !hasWritePermission) return;
     setSelectedText(selection);
+  };
+
+  const handleSharePermission = () => {
+    if (!parsedTextId || !isShareManager) return;
+    const granteeInput = window.prompt("Enter grantee user ID");
+    if (!granteeInput) return;
+    const granteeUserId = Number(granteeInput);
+    if (!Number.isInteger(granteeUserId) || granteeUserId <= 0) {
+      toast.error("Invalid user ID");
+      return;
+    }
+    const permissionInput = window
+      .prompt('Permission ("read" or "write")', "read")
+      ?.toLowerCase();
+    if (permissionInput !== "read" && permissionInput !== "write") {
+      toast.error('Permission must be "read" or "write"');
+      return;
+    }
+    upsertTextPermissionMutation.mutate(
+      { grantee_user_id: granteeUserId, permission: permissionInput },
+      {
+        onSuccess: () => toast.success("Permission updated"),
+        onError: (err) =>
+          toast.error("Failed to update permission", {
+            description: err instanceof Error ? err.message : "Please try again.",
+          }),
+      }
+    );
+  };
+
+  const handleRevokePermission = () => {
+    if (!parsedTextId || !isShareManager) return;
+    const granteeInput = window.prompt("Enter grantee user ID to revoke");
+    if (!granteeInput) return;
+    const granteeUserId = Number(granteeInput);
+    if (!Number.isInteger(granteeUserId) || granteeUserId <= 0) {
+      toast.error("Invalid user ID");
+      return;
+    }
+    deleteTextPermissionMutation.mutate(granteeUserId, {
+      onSuccess: () => toast.success("Permission removed"),
+      onError: (err) =>
+        toast.error("Failed to remove permission", {
+          description: err instanceof Error ? err.message : "Please try again.",
+        }),
+    });
   };
 
   /**
@@ -342,10 +410,10 @@ const Index = () => {
               selectedText={selectedText}
               onTextSelect={handleTextSelect}
               onAddAnnotation={handleAddAnnotation}
-              onRemoveAnnotation={isViewer ? () => {} : removeAnnotation}
-              onUpdateAnnotation={isViewer ? () => {} : updateAnnotation}
-              onHeaderSelected={isViewer ? () => {} : handleHeaderSelected}
-              onUpdateHeaderSpan={isViewer ? () => {} : handleUpdateHeaderSpan}
+              onRemoveAnnotation={hasWritePermission ? removeAnnotation : () => {}}
+              onUpdateAnnotation={hasWritePermission ? updateAnnotation : () => {}}
+              onHeaderSelected={hasWritePermission ? handleHeaderSelected : () => {}}
+              onUpdateHeaderSpan={hasWritePermission ? handleUpdateHeaderSpan : () => {}}
               readOnly={isReadOnly}
               isCreatingAnnotation={isCreatingAnnotation}
               isDeletingAnnotation={isDeletingAnnotation}
@@ -379,15 +447,23 @@ const Index = () => {
             textData={textData}
             userRole={userRole}
             userAnnotationsCount={getUserAnnotationsCount()}
+            hasWritePermission={hasWritePermission}
+            canManagePermissions={isShareManager}
+            sharedPermissions={sharedPermissions}
+            onSharePermission={handleSharePermission}
+            onRevokePermission={handleRevokePermission}
+            isUpdatingPermissions={
+              upsertTextPermissionMutation.isPending || deleteTextPermissionMutation.isPending
+            }
           />
           <AnnotationSidebar
             annotations={annotationsWithoutHeader}
             fullText={text}
             isBulkOperationPending={isCreatingAnnotation || isDeletingAnnotation || isBulkOperationPending}
-            onRemoveAnnotation={isViewer ? () => {} : removeAnnotation}
+            onRemoveAnnotation={hasWritePermission ? removeAnnotation : () => {}}
             onAnnotationClick={handleAnnotationClick}
-            onApplyToAll={isViewer ? undefined : applyAnnotationToAll}
-            onRemoveFromAll={isViewer ? undefined : removeAnnotationFromAll}
+            onApplyToAll={hasWritePermission ? applyAnnotationToAll : undefined}
+            onRemoveFromAll={hasWritePermission ? removeAnnotationFromAll : undefined}
             isOpen={sidebarOpen}
             onToggle={toggleSidebar}
           />

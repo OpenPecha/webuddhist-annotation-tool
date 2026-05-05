@@ -11,6 +11,35 @@ import {
 } from "react-icons/io5";
 import { useNavigate } from "react-router-dom";
 import { DocumentExportDropdown } from "@/components/DocumentExportDropdown";
+import type { TextPermissionResponse } from "@/api/types";
+
+type ActionButtonsProps = {
+  readonly annotations: Annotation[];
+  readonly onSubmitTask: () => void;
+  readonly onSkipText?: () => void;
+  readonly onUndoAnnotations?: () => void;
+  readonly onRevertWork?: () => void;
+  readonly onExport?: (format: "json" | "tei") => void;
+  readonly onToggleDiplomatic?: () => void;
+  readonly isDiplomaticVisible?: boolean;
+  readonly onDeleteMyText?: () => void;
+  readonly canDeleteMyText?: boolean;
+  readonly isDeletingText?: boolean;
+  readonly textData?: TextWithAnnotations;
+  readonly userRole?: UserRole;
+  readonly hasDiplomatic?: boolean;
+  readonly userAnnotationsCount?: number;
+  readonly hasWritePermission?: boolean;
+  readonly canManagePermissions?: boolean;
+  readonly sharedPermissions?: TextPermissionResponse[];
+  readonly onSharePermission?: () => void;
+  readonly onRevokePermission?: () => void;
+  readonly isUpdatingPermissions?: boolean;
+  readonly isSubmitting?: boolean;
+  readonly isSkipping?: boolean;
+  readonly isUndoing?: boolean;
+  readonly isCompletedTask?: boolean;
+};
 
 function ActionButtons({
   annotations,
@@ -27,36 +56,22 @@ function ActionButtons({
   textData,
   userRole,
   userAnnotationsCount = 0,
+  hasWritePermission = false,
+  canManagePermissions = false,
+  sharedPermissions = [],
+  onSharePermission,
+  onRevokePermission,
+  isUpdatingPermissions = false,
   isSubmitting = false,
   isSkipping = false,
   isUndoing = false,
   isCompletedTask = false,
   hasDiplomatic = false,
-}: {
-  readonly annotations: Annotation[];
-  readonly onSubmitTask: () => void;
-  readonly onSkipText?: () => void;
-  readonly onUndoAnnotations?: () => void;
-  readonly onRevertWork?: () => void;
-  readonly onExport?: (format: "json" | "tei") => void;
-  readonly onToggleDiplomatic?: () => void;
-  readonly isDiplomaticVisible?: boolean;
-  readonly onDeleteMyText?: () => void;
-  readonly canDeleteMyText?: boolean;
-  readonly isDeletingText?: boolean;
-  readonly textData?: TextWithAnnotations;
-  readonly userRole?: UserRole;
-  readonly hasDiplomatic?: boolean;
-  readonly userAnnotationsCount?: number;
-  readonly isSubmitting?: boolean;
-  readonly isSkipping?: boolean;
-  readonly isUndoing?: boolean;
-  readonly isCompletedTask?: boolean;
-}) {
+}: ActionButtonsProps) {
   const navigate = useNavigate();
 
   // Determine if user can submit (annotator, reviewer, or admin)
-  const canSubmit = userRole === "annotator" || userRole === "reviewer" || userRole === "admin";
+  const canSubmit = hasWritePermission;
   
   // Determine if user can only export (regular user)
   const canOnlyExport = userRole === "user";
@@ -136,6 +151,32 @@ function ActionButtons({
           onSelectFormat={onExport}
           disabled={!textData}
         />
+      )}
+
+      {canManagePermissions && (
+        <div className="rounded-md border border-border p-2 space-y-2">
+          <p className="text-xs text-muted-foreground">
+            Shared users: {sharedPermissions.length}
+          </p>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onSharePermission}
+              disabled={isUpdatingPermissions}
+            >
+              Grant / Update
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={onRevokePermission}
+              disabled={isUpdatingPermissions}
+            >
+              Revoke
+            </Button>
+          </div>
+        </div>
       )}
 
 

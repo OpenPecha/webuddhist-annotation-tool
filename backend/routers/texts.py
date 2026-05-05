@@ -15,6 +15,8 @@ from schemas.text import (
     TextListResponse,
     TaskSubmissionResponse,
     RecentActivityWithReviewCounts,
+    TextPermissionUpsertRequest,
+    TextPermissionResponse,
 )
 from schemas.combined import TextWithAnnotations
 from schemas.user_rejected_text import RejectedTextWithDetails
@@ -160,11 +162,15 @@ def revert_work(
 
 @router.get("/my-work-in-progress", response_model=List[TextResponse])
 def get_my_work_in_progress(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Get all texts that the current user is currently working on."""
-    return texts_controller.get_my_work_in_progress(db, current_user)
+    """Get texts that the current user can write to."""
+    return texts_controller.get_my_work_in_progress(
+        db, current_user, skip=skip, limit=limit
+    )
 
 
 @router.post("/{text_id}/submit-task", response_model=TaskSubmissionResponse)
@@ -312,3 +318,37 @@ def soft_delete_my_text(
 ):
     """Soft delete a text that the current user uploaded. Only uploader can delete."""
     return texts_controller.soft_delete_my_text(db, current_user, text_id)
+
+
+@router.get("/{text_id}/permissions", response_model=List[TextPermissionResponse])
+def list_text_permissions(
+    text_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """List shared permissions for a text (owner/admin only)."""
+    return texts_controller.list_text_permissions(db, current_user, text_id)
+
+
+@router.post("/{text_id}/permissions", response_model=TextPermissionResponse)
+def upsert_text_permission(
+    text_id: int,
+    permission_in: TextPermissionUpsertRequest,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Grant or update shared read/write permission for a text (owner/admin only)."""
+    return texts_controller.upsert_text_permission(db, current_user, text_id, permission_in)
+
+
+@router.delete("/{text_id}/permissions/{grantee_user_id}", status_code=200)
+def delete_text_permission(
+    text_id: int,
+    grantee_user_id: int,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Revoke shared permission for a user on a text (owner/admin only)."""
+    return texts_controller.delete_text_permission(
+        db, current_user, text_id, grantee_user_id
+    )

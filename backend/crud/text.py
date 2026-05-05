@@ -1,13 +1,93 @@
 from typing import List, Optional
 from datetime import datetime, timezone
 from sqlalchemy.orm import Session, joinedload, defer
-from sqlalchemy import func, and_, exists, select
+from sqlalchemy import func, and_, exists, select, or_
 from models.text import Text, INITIALIZED, ANNOTATED, REVIEWED, REVIEWED_NEEDS_REVISION, SKIPPED, PROGRESS, VALID_STATUSES
+from models.text_permission import TextPermission, TEXT_PERMISSION_READ, TEXT_PERMISSION_WRITE
 from models.annotation import Annotation
 from schemas.text import TextCreate, TextListResponse, TextUpdate
 
 
 class TextCRUD:
+    def upsert_permission(
+        self,
+        db: Session,
+        text_id: int,
+        owner_user_id: int,
+        grantee_user_id: int,
+        permission: str,
+    ) -> TextPermission:
+        existing = (
+            db.query(TextPermission)
+            .filter(
+                TextPermission.text_id == text_id,
+                TextPermission.grantee_user_id == grantee_user_id,
+            )
+            .first()
+        )
+        if existing:
+            existing.permission = permission
+            existing.owner_user_id = owner_user_id
+            db.add(existing)
+            db.commit()
+            db.refresh(existing)
+            return existing
+
+        db_obj = TextPermission(
+            text_id=text_id,
+            owner_user_id=owner_user_id,
+            grantee_user_id=grantee_user_id,
+            permission=permission,
+        )
+        db.add(db_obj)
+        db.commit()
+        db.refresh(db_obj)
+        return db_obj
+
+    def remove_permission(self, db: Session, text_id: int, grantee_user_id: int) -> bool:
+        db_obj = (
+            db.query(TextPermission)
+            .filter(
+                TextPermission.text_id == text_id,
+                TextPermission.grantee_user_id == grantee_user_id,
+            )
+            .first()
+        )
+        if not db_obj:
+            return False
+        db.delete(db_obj)
+        db.commit()
+        return True
+
+    def list_permissions_for_text(self, db: Session, text_id: int) -> List[TextPermission]:
+        return (
+            db.query(TextPermission)
+            .options(joinedload(TextPermission.grantee))
+            .filter(TextPermission.text_id == text_id)
+            .all()
+        )
+
+    def get_effective_text_permission(self, db: Session, user_id: int, text: Text, role: str) -> str:
+        if role == "admin":
+            return TEXT_PERMISSION_WRITE
+        if text.uploaded_by == user_id:
+            return TEXT_PERMISSION_WRITE
+
+        shared = (
+            db.query(TextPermission)
+            .filter(
+                TextPermission.text_id == text.id,
+                TextPermission.grantee_user_id == user_id,
+            )
+            .first()
+        )
+        if shared:
+            return shared.permission
+        return TEXT_PERMISSION_READ
+
+    def can_write_text(self, db: Session, user_id: int, text: Text, role: str) -> bool:
+        return self.get_effective_text_permission(db, user_id, text, role) == TEXT_PERMISSION_WRITE
+
     def create(self, db: Session, obj_in: TextCreate) -> Text:
         """Create a new text."""
         db_obj = Text(
@@ -468,23 +548,37 @@ class TextCRUD:
         
         return True
 
-    def get_user_work_in_progress(self, db: Session, user_id: int, user_role: str = None) -> List[Text]:
-        """Get all texts that user is currently working on (progress status)."""
-        query = self._not_deleted(db.query(Text)).filter(
-            Text.annotator_id == user_id,
-            Text.status == PROGRESS
+    def get_user_work_in_progress(
+        self,
+        db: Session,
+        user_id: int,
+        user_role: str = None,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> List[Text]:
+        """Get all texts where current user has effective write permission."""
+        base_query = self._not_deleted(db.query(Text)).options(
+            joinedload(Text.annotator),
+            joinedload(Text.reviewer),
+            joinedload(Text.uploader),
         )
-        
-        # Role-based filtering for work in progress
-        if user_role == "user":
-            # USER role: only see texts they uploaded
-            query = query.filter(Text.uploaded_by == user_id)
-        elif user_role == "annotator":
-            # ANNOTATOR role: only see system texts (not uploaded by users)
-            query = query.filter(Text.uploaded_by.is_(None))
-        # ADMIN role: no additional filtering (can see all texts they're working on)
-        
-        return query.all()
+
+        writable_shared = (
+            db.query(TextPermission.text_id)
+            .filter(
+                TextPermission.grantee_user_id == user_id,
+                TextPermission.permission == TEXT_PERMISSION_WRITE,
+            )
+            .subquery()
+        )
+        query = base_query.filter(
+            or_(
+                Text.uploaded_by == user_id,
+                Text.id.in_(select(writable_shared.c.text_id)),
+            )
+        )
+
+        return query.order_by(Text.updated_at.desc().nullslast(), Text.created_at.desc()).offset(skip).limit(limit).all()
 
     def get_texts_by_annotator_with_reviews(
         self, db: Session, annotator_id: int, skip: int = 0, limit: int = 100

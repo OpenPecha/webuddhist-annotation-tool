@@ -26,6 +26,9 @@ export {
   useSubmitTask,
   useUpdateTask,
   useCancelWorkWithRevertAndSkip,
+  useTextPermissions,
+  useUpsertTextPermission,
+  useDeleteTextPermission,
 } from "./useTexts";
 
 // Annotation Hooks

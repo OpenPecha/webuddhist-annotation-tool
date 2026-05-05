@@ -16,6 +16,8 @@ import type {
   AdminTextStatistics,
   RecentActivityWithReviewCounts,
   TextStatus,
+  TextPermissionResponse,
+  TextPermissionUpsertRequest,
 } from "@/api/types";
 import { useAnnotationFiltersStore } from "@/store/annotationFilters";
 // ============================================================================
@@ -88,10 +90,10 @@ export const useTextsForReview = (filters?: { skip?: number; limit?: number }) =
 /**
  * Get current user's work in progress
  */
-export const useMyWorkInProgress = () => {
+export const useMyWorkInProgress = (filters?: { skip?: number; limit?: number }) => {
   return useQuery({
-    queryKey: queryKeys.texts.myWorkInProgress,
-    queryFn: () => textApi.getMyWorkInProgress(),
+    queryKey: [...queryKeys.texts.myWorkInProgress, filters],
+    queryFn: () => textApi.getMyWorkInProgress(filters),
     staleTime: 1000 * 30, // 30 seconds
     refetchOnWindowFocus: true,
   });
@@ -418,6 +420,39 @@ export const useCancelWorkWithRevertAndSkip = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.texts.myWorkInProgress });
       queryClient.invalidateQueries({ queryKey: queryKeys.texts.myRejectedTexts });
       queryClient.invalidateQueries({ queryKey: queryKeys.texts.forAnnotation });
+    },
+  });
+};
+
+export const useTextPermissions = (textId: number, enabled = true) => {
+  return useQuery<TextPermissionResponse[]>({
+    queryKey: [...queryKeys.texts.detail(textId), "permissions"],
+    queryFn: () => textApi.listTextPermissions(textId),
+    enabled: enabled && !!textId,
+    staleTime: 1000 * 30,
+  });
+};
+
+export const useUpsertTextPermission = (textId: number) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (data: TextPermissionUpsertRequest) =>
+      textApi.upsertTextPermission(textId, data),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...queryKeys.texts.detail(textId), "permissions"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.texts.myWorkInProgress });
+    },
+  });
+};
+
+export const useDeleteTextPermission = (textId: number) => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (granteeUserId: number) =>
+      textApi.deleteTextPermission(textId, granteeUserId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: [...queryKeys.texts.detail(textId), "permissions"] });
+      queryClient.invalidateQueries({ queryKey: queryKeys.texts.myWorkInProgress });
     },
   });
 };

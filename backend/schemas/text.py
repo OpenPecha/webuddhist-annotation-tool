@@ -1,5 +1,5 @@
 from pydantic import BaseModel, ConfigDict, Field, validator
-from typing import Optional
+from typing import Optional, Literal
 from datetime import datetime
 from models.text import VALID_STATUSES
 
@@ -78,6 +78,7 @@ class TextResponse(TextBase):
     annotation_type_id: Optional[str] = None
     reviewer_id: Optional[int] = None
     uploaded_by: Optional[int] = None
+    current_user_permission: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     
@@ -141,3 +142,21 @@ class RecentActivityWithReviewCounts(BaseModel):
     accepted_count: int
     rejected_count: int
     all_accepted: bool 
+
+
+class TextPermissionUpsertRequest(BaseModel):
+    grantee_user_id: int = Field(..., gt=0)
+    permission: Literal["read", "write"]
+
+
+class TextPermissionResponse(BaseModel):
+    model_config = ConfigDict(from_attributes=True)
+
+    id: int
+    text_id: int
+    owner_user_id: int
+    grantee_user_id: int
+    permission: Literal["read", "write"]
+    created_at: datetime
+    updated_at: Optional[datetime] = None
+    grantee: Optional[UserBasic] = None

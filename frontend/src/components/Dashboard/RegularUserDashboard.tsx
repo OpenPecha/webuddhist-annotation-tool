@@ -11,6 +11,7 @@ import { useAuth0 } from "@auth0/auth0-react";
 import { useStartWork, useMyWorkInProgress, usePermission, useTexts } from "@/hooks";
 import { ListTodo } from "lucide-react";
 import { IoChevronBack, IoChevronForward } from "react-icons/io5";
+import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString("en-US", {
@@ -18,6 +19,17 @@ const formatDate = (dateString: string) => {
     month: "short",
     day: "numeric",
   });
+};
+
+const getInitials = (name?: string) => {
+  if (!name) return "SY";
+  return name
+    .split(" ")
+    .filter(Boolean)
+    .map((n) => n[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
 };
 
 const StartWorkIcon = () => (
@@ -44,20 +56,29 @@ export const RegularUserDashboard: React.FC = () => {
   const [showLoadTextModal, setShowLoadTextModal] = useState(false);
   const [isLoadingText, setIsLoadingText] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [currentPage, setCurrentPage] = useState(1);
+  const [activeTab, setActiveTab] = useState<"my-work" | "all-tasks">("my-work");
+  const [myWorkPage, setMyWorkPage] = useState(1);
+  const [allTasksPage, setAllTasksPage] = useState(1);
 
   const startWorkMutation = useStartWork();
   const ITEMS_PER_PAGE = 10;
-  const skip = (currentPage - 1) * ITEMS_PER_PAGE;
+  const myWorkSkip = (myWorkPage - 1) * ITEMS_PER_PAGE;
+  const allTasksSkip = (allTasksPage - 1) * ITEMS_PER_PAGE;
 
-  const { data: workInProgress = [], isLoading: isLoadingWorkInProgress } =
-    useMyWorkInProgress();
-  const { data: paginatedTexts = [], isLoading: isLoadingTexts } = useTexts({
-    skip,
+  const { data: workInProgress = [], isLoading: isLoadingWorkInProgress } = useMyWorkInProgress({
+    skip: myWorkSkip,
     limit: ITEMS_PER_PAGE,
   });
-  const hasPreviousPage = currentPage > 1;
-  const hasNextPage = paginatedTexts.length === ITEMS_PER_PAGE;
+  const { data: paginatedTexts = [], isLoading: isLoadingTexts } = useTexts({
+    skip: allTasksSkip,
+    limit: ITEMS_PER_PAGE,
+  });
+  const hasPreviousMyWorkPage = myWorkPage > 1;
+  const hasNextMyWorkPage = workInProgress.length === ITEMS_PER_PAGE;
+  const hasPreviousAllTasksPage = allTasksPage > 1;
+  const hasNextAllTasksPage = paginatedTexts.length === ITEMS_PER_PAGE;
+  const canViewAllTasksTab =
+    role === "annotator" || role === "reviewer" || role === "admin";
 
   const handleStartWork = () => {
     setIsLoadingText(true);
@@ -161,7 +182,7 @@ export const RegularUserDashboard: React.FC = () => {
             <span className="ml-2">{startBusy ? "Starting…" : "Start Work"}</span>
           </Button>
 
-          {role === "user" && (
+          {role !== "user" && (
             <Button
               size="lg"
               variant="outline"
@@ -190,16 +211,41 @@ export const RegularUserDashboard: React.FC = () => {
       <div className="flex-1 overflow-auto md:ml-0 ml-0">
         <div className="p-4 md:p-8 pt-20 md:pt-8">
           {user && (
+            <div className="mb-6">
+              <div className="inline-flex rounded-lg border border-border bg-card p-1">
+                <Button
+                  variant={activeTab === "my-work" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setActiveTab("my-work")}
+                  className="rounded-md"
+                >
+                  My Work
+                </Button>
+                {canViewAllTasksTab && (
+                  <Button
+                    variant={activeTab === "all-tasks" ? "default" : "ghost"}
+                    size="sm"
+                    onClick={() => setActiveTab("all-tasks")}
+                    className="rounded-md"
+                  >
+                    All Tasks
+                  </Button>
+                )}
+              </div>
+            </div>
+          )}
+
+          {user && activeTab === "my-work" && (
             <div className="mb-8">
               <div className="mb-4">
                 <div className="flex items-center gap-2 mb-1">
                   <ListTodo className="w-5 h-5 text-muted-foreground" />
                   <h2 className="font-display text-lg font-semibold text-foreground">
-                    My Tasks
+                    My Work
                   </h2>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Texts you are currently working on
+                  Tasks you can write on
                 </p>
               </div>
               {isLoadingWorkInProgress && (
@@ -219,6 +265,16 @@ export const RegularUserDashboard: React.FC = () => {
                         <p className="font-medium text-foreground truncate">
                           {text.title}
                         </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-[10px]">
+                              {getInitials(text.uploader?.full_name || text.uploader?.username || "System")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <p className="text-xs text-muted-foreground truncate">
+                            Owner: {text.uploader?.full_name || text.uploader?.username || "System"}
+                          </p>
+                        </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           Status: {text.status} •{" "}
                           {formatDate(text.updated_at || text.created_at)}
@@ -229,15 +285,38 @@ export const RegularUserDashboard: React.FC = () => {
                         className="ml-4 shrink-0"
                         onClick={() => navigate(`/task/${text.id}`)}
                       >
-                        Continue
+                        Open & Edit
                       </Button>
                     </div>
                   ))}
+                  <div className="flex items-center justify-between pt-2">
+                    <p className="text-sm text-muted-foreground">Page {myWorkPage}</p>
+                    <div className="flex gap-2">
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setMyWorkPage((p) => Math.max(1, p - 1))}
+                        disabled={!hasPreviousMyWorkPage}
+                      >
+                        <IoChevronBack className="w-4 h-4 mr-1" />
+                        Previous
+                      </Button>
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        onClick={() => setMyWorkPage((p) => p + 1)}
+                        disabled={!hasNextMyWorkPage}
+                      >
+                        Next
+                        <IoChevronForward className="w-4 h-4 ml-1" />
+                      </Button>
+                    </div>
+                  </div>
                 </div>
               )}
               {!isLoadingWorkInProgress && workInProgress.length === 0 && (
                 <div className="text-center py-6 border border-dashed border-border rounded-lg bg-muted/30">
-                  <p className="text-muted-foreground">No tasks in progress.</p>
+                  <p className="text-muted-foreground">No writable tasks found.</p>
                   <p className="text-sm text-muted-foreground mt-1">
                     Use <strong>Start Work</strong> in the sidebar to pick a text
                     {role === "user" ? (
@@ -253,14 +332,14 @@ export const RegularUserDashboard: React.FC = () => {
             </div>
           )}
 
-          {(role === "user" || role === "annotator") && (
+          {user && canViewAllTasksTab && activeTab === "all-tasks" && (
             <div className="mb-8">
               <div className="mb-4">
                 <h2 className="font-display text-lg font-semibold text-foreground">
-                  All Documents
+                  All Tasks
                 </h2>
                 <p className="text-sm text-muted-foreground">
-                  Browse all documents with pagination
+                  Browse all tasks with pagination
                 </p>
               </div>
               {isLoadingTexts && (
@@ -280,6 +359,16 @@ export const RegularUserDashboard: React.FC = () => {
                         <p className="font-medium text-foreground truncate">
                           {text.title}
                         </p>
+                        <div className="flex items-center gap-2 mt-1">
+                          <Avatar className="h-6 w-6">
+                            <AvatarFallback className="text-[10px]">
+                              {getInitials(text.uploader?.full_name || text.uploader?.username || "System")}
+                            </AvatarFallback>
+                          </Avatar>
+                          <p className="text-xs text-muted-foreground truncate">
+                            Owner: {text.uploader?.full_name || text.uploader?.username || "System"}
+                          </p>
+                        </div>
                         <p className="text-xs text-muted-foreground mt-0.5">
                           Status: {text.status} • {formatDate(text.updated_at || text.created_at)}
                         </p>
@@ -287,20 +376,24 @@ export const RegularUserDashboard: React.FC = () => {
                       <Button
                         size="sm"
                         className="ml-4 shrink-0"
-                        onClick={() => navigate(`/task/${text.id}`)}
+                        onClick={() =>
+                          navigate(`/task/${text.id}`, {
+                            state: { forceReadOnly: true },
+                          })
+                        }
                       >
                         View
                       </Button>
                     </div>
                   ))}
                   <div className="flex items-center justify-between pt-2">
-                    <p className="text-sm text-muted-foreground">Page {currentPage}</p>
+                    <p className="text-sm text-muted-foreground">Page {allTasksPage}</p>
                     <div className="flex gap-2">
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                        disabled={!hasPreviousPage}
+                        onClick={() => setAllTasksPage((p) => Math.max(1, p - 1))}
+                        disabled={!hasPreviousAllTasksPage}
                       >
                         <IoChevronBack className="w-4 h-4 mr-1" />
                         Previous
@@ -308,8 +401,8 @@ export const RegularUserDashboard: React.FC = () => {
                       <Button
                         variant="outline"
                         size="sm"
-                        onClick={() => setCurrentPage((p) => p + 1)}
-                        disabled={!hasNextPage}
+                        onClick={() => setAllTasksPage((p) => p + 1)}
+                        disabled={!hasNextAllTasksPage}
                       >
                         Next
                         <IoChevronForward className="w-4 h-4 ml-1" />
