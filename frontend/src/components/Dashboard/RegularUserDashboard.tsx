@@ -253,7 +253,7 @@ export const RegularUserDashboard: React.FC = () => {
             </div>
           )}
 
-          {role === "user" && (
+          {(role === "user" || role === "annotator") && (
             <div className="mb-8">
               <div className="mb-4">
                 <h2 className="font-display text-lg font-semibold text-foreground">
@@ -289,7 +289,7 @@ export const RegularUserDashboard: React.FC = () => {
                         className="ml-4 shrink-0"
                         onClick={() => navigate(`/task/${text.id}`)}
                       >
-                        Open
+                        View
                       </Button>
                     </div>
                   ))}

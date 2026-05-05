@@ -8,16 +8,12 @@ function Login() {
 
   useEffect(() => {
     if (isAuthenticated && !isLoading) {
-      navigate('/');
+      navigate('/dashboard');
     }
   }, [isAuthenticated, isLoading, navigate]);
 
   const handleLogin = () => {
-    loginWithRedirect({
-      appState: {
-        returnTo: window.location.pathname || '/',
-      },
-    });
+    loginWithRedirect();
   };
 
   if (isLoading) {
