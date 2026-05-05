@@ -61,6 +61,16 @@ export interface AnnotationListUpdate {
   meta?: Record<string, any>;
 }
 
+export interface AnnotationListFilters {
+  title?: string;
+  type?: string;
+  created_by?: string;
+  created_at?: string;
+  skip?: number;
+  limit?: number;
+  [key: string]: string | number | boolean | undefined;
+}
+
 export const annotationListApi = {
   /**
    * Upload a JSON file with hierarchical annotation list
@@ -84,9 +94,10 @@ export const annotationListApi = {
     );
   },
 
-  getAll: async (): Promise<AnnotationListResponse[]> => {
+  getAll: async (params?: AnnotationListFilters): Promise<AnnotationListResponse[]> => {
     return await apiClient.get<AnnotationListResponse[]>(
-      `/annotation-lists/`
+      `/annotation-lists/`,
+      params
     );
   },
 

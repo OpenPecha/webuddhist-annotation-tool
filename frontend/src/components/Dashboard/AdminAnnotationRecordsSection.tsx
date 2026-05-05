@@ -19,24 +19,29 @@ const formatDate = (iso: string) => {
   return date.toLocaleDateString();
 };
 
-const toDateInputValue = (iso: string) => {
-  const date = new Date(iso);
-  if (Number.isNaN(date.getTime())) {
-    return "";
-  }
-  return date.toISOString().slice(0, 10);
-};
-
 const escapeCsvValue = (value: string) => {
   const escaped = value.replaceAll('"', '""');
   return `"${escaped}"`;
 };
 
 export const AdminAnnotationRecordsSection: React.FC = () => {
+  const [titleInput, setTitleInput] = useState("");
   const [createdByFilter, setCreatedByFilter] = useState("all");
   const [createdAtFilter, setCreatedAtFilter] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
-  const { data: annotationLists = [], isLoading, error } = useAllAnnotationLists();
+  const [appliedFilters, setAppliedFilters] = useState({
+    title: "",
+    createdBy: "all",
+    createdAt: "",
+    type: "all",
+  });
+  const { data: annotationLists = [], isLoading, error } = useAllAnnotationLists({
+    title: appliedFilters.title || undefined,
+    created_by:
+      appliedFilters.createdBy === "all" ? undefined : appliedFilters.createdBy,
+    created_at: appliedFilters.createdAt || undefined,
+    type: appliedFilters.type === "all" ? undefined : appliedFilters.type,
+  });
   const { data: users = [] } = useUsers();
   const { data: annotationTypes = [] } = useAnnotationTypes();
 
@@ -72,39 +77,32 @@ export const AdminAnnotationRecordsSection: React.FC = () => {
   };
 
   const availableTypes = useMemo(() => {
-    const values = new Set<string>();
-    annotationLists.forEach((item) => {
-      const typeName = getTypeDisplayName(item);
-      if (typeName !== "-") {
-        values.add(typeName);
-      }
-    });
-    return Array.from(values).sort((a, b) => a.localeCompare(b));
-  }, [annotationLists, typeNameById]);
+    return annotationTypes
+      .map((item) => item.name)
+      .filter((name): name is string => Boolean(name))
+      .sort((a, b) => a.localeCompare(b));
+  }, [annotationTypes]);
 
   const availableCreators = useMemo(() => {
-    const values = new Set<string>();
-    annotationLists.forEach((item) => {
-      const displayName = getCreatorDisplayName(item.created_by);
-      if (displayName !== "-") {
-        values.add(displayName);
-      }
-    });
-    return Array.from(values).sort((a, b) => a.localeCompare(b));
-  }, [annotationLists, userNameByAuth0Id]);
+    return users
+      .filter((user) => Boolean(user.auth0_user_id))
+      .map((user) => ({
+        value: user.auth0_user_id as string,
+        label: user.full_name || user.username,
+      }))
+      .sort((a, b) => a.label.localeCompare(b.label));
+  }, [users]);
 
-  const filteredLists = useMemo(() => {
-    return annotationLists.filter((item) => {
-      const createdByMatches =
-        createdByFilter === "all" ||
-        getCreatorDisplayName(item.created_by) === createdByFilter;
-      const typeMatches =
-        typeFilter === "all" || getTypeDisplayName(item) === typeFilter;
-      const createdAtMatches =
-        !createdAtFilter || toDateInputValue(item.created_at) === createdAtFilter;
-      return createdByMatches && typeMatches && createdAtMatches;
+  const filteredLists = annotationLists;
+
+  const handleApplyFilters = () => {
+    setAppliedFilters({
+      title: titleInput.trim(),
+      createdBy: createdByFilter,
+      createdAt: createdAtFilter,
+      type: typeFilter,
     });
-  }, [annotationLists, createdByFilter, typeFilter, createdAtFilter, typeNameById]);
+  };
 
   const handleExportFiltered = () => {
     const header = ["title", "type", "created_by", "created_at"];
@@ -221,6 +219,13 @@ export const AdminAnnotationRecordsSection: React.FC = () => {
       </CardHeader>
       <CardContent>
         <div className="flex flex-col md:flex-row gap-4 mb-6">
+          <input
+            type="text"
+            placeholder="Search by title..."
+            value={titleInput}
+            onChange={(e) => setTitleInput(e.target.value)}
+            className="w-full md:w-64 pl-3 pr-3 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
           <select
             value={createdByFilter}
             onChange={(e) => setCreatedByFilter(e.target.value)}
@@ -228,8 +233,8 @@ export const AdminAnnotationRecordsSection: React.FC = () => {
           >
             <option value="all">All Creators</option>
             {availableCreators.map((creator) => (
-              <option key={creator} value={creator}>
-                {creator}
+              <option key={creator.value} value={creator.value}>
+                {creator.label}
               </option>
             ))}
           </select>
@@ -253,6 +258,13 @@ export const AdminAnnotationRecordsSection: React.FC = () => {
           </select>
           <Button
             type="button"
+            onClick={handleApplyFilters}
+            className="w-full md:w-auto"
+          >
+            Apply Filters
+          </Button>
+          <Button
+            type="button"
             variant="outline"
             onClick={handleExportFiltered}
             disabled={filteredLists.length === 0}
@@ -261,7 +273,9 @@ export const AdminAnnotationRecordsSection: React.FC = () => {
             Export CSV
           </Button>
         </div>
-        {tableBody}
+        <div className="max-h-[calc(100vh-280px)] overflow-y-auto pr-1">
+          {tableBody}
+        </div>
       </CardContent>
     </Card>
   );

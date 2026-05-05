@@ -1,5 +1,7 @@
 from typing import List, Optional, Dict, Any, Set
 from sqlalchemy.orm import Session
+from sqlalchemy import func
+from datetime import date
 import uuid
 from models.annotation_list import AnnotationList
 from models.annotation_type import AnnotationType
@@ -118,7 +120,9 @@ class AnnotationListCRUD:
         skip: int = 0, 
         limit: int = 100,
         type_filter: Optional[str] = None,
-        created_by: Optional[str] = None
+        created_by: Optional[str] = None,
+        title_filter: Optional[str] = None,
+        created_at_filter: Optional[str] = None
     ) -> List[AnnotationList]:
         """Get multiple annotation lists with optional filtering."""
         query = db.query(AnnotationList)
@@ -134,6 +138,16 @@ class AnnotationListCRUD:
         
         if created_by:
             query = query.filter(AnnotationList.created_by == created_by)
+
+        if title_filter:
+            query = query.filter(AnnotationList.title.ilike(f"%{title_filter.strip()}%"))
+
+        if created_at_filter:
+            try:
+                filter_date = date.fromisoformat(created_at_filter)
+                query = query.filter(func.date(AnnotationList.created_at) == filter_date)
+            except ValueError:
+                return []
         
         return query.offset(skip).limit(limit).all()
     

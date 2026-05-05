@@ -6,6 +6,7 @@ import {
   type AnnotationListCreate,
   type AnnotationListUpdate,
   type AnnotationListResponse,
+  type AnnotationListFilters,
 } from "@/api/annotation_list";
 import { queryKeys } from "@/constants/queryKeys";
 import { toast } from "sonner";
@@ -48,10 +49,10 @@ export const useAnnotationListHierarchical = ({
   });
 };
 
-export const useAllAnnotationLists = () => {
+export const useAllAnnotationLists = (filters?: AnnotationListFilters) => {
   return useQuery<AnnotationListResponse[]>({
-    queryKey: queryKeys.annotationLists.all,
-    queryFn: () => annotationListApi.getAll(),
+    queryKey: [...queryKeys.annotationLists.all, filters],
+    queryFn: () => annotationListApi.getAll(filters),
     staleTime: 5 * 60 * 1000,
     retry: 2,
   });

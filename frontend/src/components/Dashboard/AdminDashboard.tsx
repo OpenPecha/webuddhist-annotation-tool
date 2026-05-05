@@ -90,7 +90,7 @@ export const AdminDashboard: React.FC = () => {
       <div
         className={`relative z-[1] transition-[margin] duration-300 ease-out ${
           sidebarOpen ? "ml-64" : "ml-[4.5rem]"
-        } min-h-[calc(100vh-64px)]`}
+        } h-[calc(100vh-64px)] overflow-hidden`}
       >
           {renderActiveTab()}
       </div>

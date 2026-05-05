@@ -27,10 +27,12 @@ def get_annotation_lists(
     limit: int = Query(100, ge=1, le=1000),
     type: Optional[str] = Query(None),
     created_by: Optional[str] = Query(None),
+    title: Optional[str] = Query(None),
+    created_at: Optional[str] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Get annotation lists with optional type and creator filtering."""
+    """Get annotation lists with optional type, creator, title, and date filtering."""
     return annotation_list_controller.get_annotation_lists(
         db=db,
         current_user=current_user,
@@ -38,6 +40,8 @@ def get_annotation_lists(
         limit=limit,
         type_filter=type,
         created_by=created_by,
+        title_filter=title,
+        created_at_filter=created_at,
     )
 
 

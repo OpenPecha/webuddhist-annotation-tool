@@ -22,6 +22,8 @@ def get_annotation_lists(
     limit: int = 100,
     type_filter: Optional[str] = None,
     created_by: Optional[str] = None,
+    title_filter: Optional[str] = None,
+    created_at_filter: Optional[str] = None,
 ):
     """Get annotation list items with optional filters."""
     return annotation_list_crud.get_multi(
@@ -30,6 +32,8 @@ def get_annotation_lists(
         limit=limit,
         type_filter=type_filter,
         created_by=created_by,
+        title_filter=title_filter,
+        created_at_filter=created_at_filter,
     )
 
 
