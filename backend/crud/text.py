@@ -580,6 +580,39 @@ class TextCRUD:
 
         return query.order_by(Text.updated_at.desc().nullslast(), Text.created_at.desc()).offset(skip).limit(limit).all()
 
+    def get_shared_texts(
+        self,
+        db: Session,
+        user_id: int,
+        skip: int = 0,
+        limit: int = 100,
+    ) -> List[Text]:
+        """Get texts explicitly shared with the current user."""
+        rows = (
+            self._not_deleted(
+                db.query(Text, TextPermission.permission)
+                .join(TextPermission, TextPermission.text_id == Text.id)
+            )
+            .options(
+                joinedload(Text.annotator),
+                joinedload(Text.reviewer),
+                joinedload(Text.uploader),
+                defer(Text.content),
+                defer(Text.translation),
+            )
+            .filter(TextPermission.grantee_user_id == user_id)
+            .order_by(Text.updated_at.desc().nullslast(), Text.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
+
+        shared_texts: List[Text] = []
+        for text, permission in rows:
+            setattr(text, "current_user_permission", permission)
+            shared_texts.append(text)
+        return shared_texts
+
     def get_texts_by_annotator_with_reviews(
         self, db: Session, annotator_id: int, skip: int = 0, limit: int = 100
     ) -> List[Text]:

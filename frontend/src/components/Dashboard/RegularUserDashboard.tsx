@@ -8,10 +8,17 @@ import BulkUploadModal from "../BulkUploadModal";
 import type { BulkUploadResponse } from "@/api/bulk-upload";
 import { LoadTextModal } from "./LoadTextModal";
 import { useAuth0 } from "@auth0/auth0-react";
-import { useStartWork, useMyWorkInProgress, usePermission, useTexts } from "@/hooks";
+import {
+  useStartWork,
+  useMyWorkInProgress,
+  usePermission,
+  useSharedTexts,
+  useTexts,
+} from "@/hooks";
 import { ListTodo } from "lucide-react";
 import { IoChevronBack, IoChevronForward } from "react-icons/io5";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
+import type { TextResponse } from "@/api/types";
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString("en-US", {
@@ -56,17 +63,23 @@ export const RegularUserDashboard: React.FC = () => {
   const [showLoadTextModal, setShowLoadTextModal] = useState(false);
   const [isLoadingText, setIsLoadingText] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
-  const [activeTab, setActiveTab] = useState<"my-work" | "all-tasks">("my-work");
+  const [activeTab, setActiveTab] = useState<"my-work" | "shared" | "all-tasks">("my-work");
   const [myWorkPage, setMyWorkPage] = useState(1);
+  const [sharedPage, setSharedPage] = useState(1);
   const [allTasksPage, setAllTasksPage] = useState(1);
 
   const startWorkMutation = useStartWork();
   const ITEMS_PER_PAGE = 10;
   const myWorkSkip = (myWorkPage - 1) * ITEMS_PER_PAGE;
+  const sharedSkip = (sharedPage - 1) * ITEMS_PER_PAGE;
   const allTasksSkip = (allTasksPage - 1) * ITEMS_PER_PAGE;
 
   const { data: workInProgress = [], isLoading: isLoadingWorkInProgress } = useMyWorkInProgress({
     skip: myWorkSkip,
+    limit: ITEMS_PER_PAGE,
+  });
+  const { data: sharedTexts = [], isLoading: isLoadingSharedTexts } = useSharedTexts({
+    skip: sharedSkip,
     limit: ITEMS_PER_PAGE,
   });
   const { data: paginatedTexts = [], isLoading: isLoadingTexts } = useTexts({
@@ -75,10 +88,23 @@ export const RegularUserDashboard: React.FC = () => {
   });
   const hasPreviousMyWorkPage = myWorkPage > 1;
   const hasNextMyWorkPage = workInProgress.length === ITEMS_PER_PAGE;
+  const hasPreviousSharedPage = sharedPage > 1;
+  const hasNextSharedPage = sharedTexts.length === ITEMS_PER_PAGE;
   const hasPreviousAllTasksPage = allTasksPage > 1;
   const hasNextAllTasksPage = paginatedTexts.length === ITEMS_PER_PAGE;
   const canViewAllTasksTab =
     role === "annotator" || role === "reviewer" || role === "admin";
+
+  const openSharedText = (text: TextResponse) => {
+    if (text.current_user_permission === "write") {
+      navigate(`/task/${text.id}`);
+      return;
+    }
+
+    navigate(`/task/${text.id}`, {
+      state: { forceReadOnly: true },
+    });
+  };
 
   const handleStartWork = () => {
     setIsLoadingText(true);
@@ -221,6 +247,7 @@ export const RegularUserDashboard: React.FC = () => {
                 >
                   My Work
                 </Button>
+            
                 {canViewAllTasksTab && (
                   <Button
                     variant={activeTab === "all-tasks" ? "default" : "ghost"}
@@ -331,6 +358,8 @@ export const RegularUserDashboard: React.FC = () => {
               )}
             </div>
           )}
+
+      
 
           {user && canViewAllTasksTab && activeTab === "all-tasks" && (
             <div className="mb-8">

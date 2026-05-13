@@ -238,6 +238,7 @@ export interface UserRoleResponse {
 export interface UserFilters extends PaginationParams {
   is_active?: boolean;
   role?: UserRole;
+  text_id?: number;
 }
 
 // Combined types
@@ -305,18 +306,50 @@ export interface RejectedTextWithDetails {
 }
 
 // Admin Text Statistics
+export interface AdminStaffRoleCounts {
+  admin: number;
+  annotator: number;
+  reviewer: number;
+}
+
+export interface AdminStaffWorkTotals {
+  texts_annotated: number;
+  reviews_completed: number;
+  work_in_progress: number;
+  uploaded_files: number;
+}
+
+export interface AdminStaffDetail {
+  id: number;
+  username: string;
+  full_name?: string;
+  role: UserRole;
+  texts_annotated: number;
+  reviews_completed: number;
+  work_in_progress: number;
+  uploaded_files: number;
+}
+
 export interface AdminTextStatistics {
   total: number;
   initialized: number;
   annotated: number;
   reviewed: number;
+  reviewed_needs_revision: number;
   skipped: number;
   progress: number;
   total_rejections: number;
   unique_rejected_texts: number;
   heavily_rejected_texts: number;
   total_active_users: number;
+  total_staff_users: number;
+  staff_role_counts: AdminStaffRoleCounts;
+  staff_work_totals: AdminStaffWorkTotals;
+  staff_details: AdminStaffDetail[];
   available_for_new_users: number;
+  completion_rate: number;
+  rejection_rate: number;
+  avg_rejections_per_text: number;
 }
 
 // Recent Activity with Review Counts

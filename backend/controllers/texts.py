@@ -343,7 +343,8 @@ def get_my_rejected_texts(db: Session, current_user: User) -> List[RejectedTextW
 
 def get_admin_text_statistics(db: Session, current_user: User) -> dict:
     """Get comprehensive text statistics for admins."""
-    from models.user import User as UserModel
+    from models.user import User as UserModel, UserRole
+    from models.text import REVIEWED_NEEDS_REVISION, Text
 
     stats = text_crud.get_stats(db)
     total_rejections = db.query(UserRejectedText).count()
@@ -355,12 +356,116 @@ def get_admin_text_statistics(db: Session, current_user: User) -> dict:
         .having(func.count(UserRejectedText.user_id) >= max(1, total_users * 0.5))
         .count()
     )
+    staff_roles = [UserRole.ADMIN, UserRole.ANNOTATOR, UserRole.REVIEWER]
+    role_counts = {"admin": 0, "annotator": 0, "reviewer": 0}
+    staff_work_totals = {
+        "texts_annotated": 0,
+        "reviews_completed": 0,
+        "work_in_progress": 0,
+        "uploaded_files": 0,
+    }
+    staff_details = []
+
+    active_staff_users = (
+        db.query(UserModel)
+        .filter(UserModel.is_active == True, UserModel.role.in_(staff_roles))
+        .all()
+    )
+
+    for staff_user in active_staff_users:
+        role_value = (
+            staff_user.role.value
+            if hasattr(staff_user.role, "value")
+            else str(staff_user.role)
+        )
+        role_counts[role_value] = role_counts.get(role_value, 0) + 1
+
+        texts_annotated = (
+            db.query(Text)
+            .filter(
+                Text.deleted_at.is_(None),
+                Text.annotator_id == staff_user.id,
+                Text.status.in_([ANNOTATED, REVIEWED, REVIEWED_NEEDS_REVISION]),
+            )
+            .count()
+        )
+        reviews_completed = (
+            db.query(Text)
+            .filter(
+                Text.deleted_at.is_(None),
+                Text.reviewer_id == staff_user.id,
+                Text.status == REVIEWED,
+            )
+            .count()
+        )
+        work_in_progress = (
+            db.query(Text)
+            .filter(
+                Text.deleted_at.is_(None),
+                Text.annotator_id == staff_user.id,
+                Text.status == PROGRESS,
+            )
+            .count()
+        )
+        uploaded_files = (
+            db.query(Text)
+            .filter(
+                Text.deleted_at.is_(None),
+                Text.uploaded_by == staff_user.id,
+            )
+            .count()
+        )
+
+        staff_work_totals["texts_annotated"] += texts_annotated
+        staff_work_totals["reviews_completed"] += reviews_completed
+        staff_work_totals["work_in_progress"] += work_in_progress
+        staff_work_totals["uploaded_files"] += uploaded_files
+
+        staff_details.append(
+            {
+                "id": staff_user.id,
+                "username": staff_user.username,
+                "full_name": staff_user.full_name,
+                "role": role_value,
+                "texts_annotated": texts_annotated,
+                "reviews_completed": reviews_completed,
+                "work_in_progress": work_in_progress,
+                "uploaded_files": uploaded_files,
+            }
+        )
+
+    role_sort_order = {"admin": 0, "reviewer": 1, "annotator": 2}
+    staff_details.sort(
+        key=lambda item: (
+            role_sort_order.get(item["role"], 99),
+            (item.get("full_name") or item["username"]).lower(),
+        )
+    )
+    completion_rate = round((stats["reviewed"] / stats["total"]) * 100, 1) if stats["total"] > 0 else 0.0
+    rejection_rate = (
+        round((unique_rejected_texts / stats["total"]) * 100, 1)
+        if stats["total"] > 0
+        else 0.0
+    )
+    avg_rejections_per_text = (
+        round(total_rejections / unique_rejected_texts, 1)
+        if unique_rejected_texts > 0
+        else 0.0
+    )
+
     return {
         **stats,
         "total_rejections": total_rejections,
         "unique_rejected_texts": unique_rejected_texts,
         "heavily_rejected_texts": heavily_rejected_texts,
         "total_active_users": total_users,
+        "total_staff_users": len(active_staff_users),
+        "staff_role_counts": role_counts,
+        "staff_work_totals": staff_work_totals,
+        "staff_details": staff_details,
+        "completion_rate": completion_rate,
+        "rejection_rate": rejection_rate,
+        "avg_rejections_per_text": avg_rejections_per_text,
         "available_for_new_users": stats["initialized"] - heavily_rejected_texts
         if stats["initialized"] > heavily_rejected_texts
         else 0,
@@ -413,6 +518,18 @@ def get_my_work_in_progress(
         db=db,
         user_id=current_user.id,
         user_role=current_user.role.value,
+        skip=skip,
+        limit=limit,
+    )
+
+
+def get_shared_texts(
+    db: Session, current_user: User, skip: int = 0, limit: int = 100
+) -> List:
+    """Get texts explicitly shared with the current user (read or write)."""
+    return text_crud.get_shared_texts(
+        db=db,
+        user_id=current_user.id,
         skip=skip,
         limit=limit,
     )

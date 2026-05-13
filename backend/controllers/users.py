@@ -8,6 +8,7 @@ from fastapi import HTTPException, status
 from auth import get_auth0_debug_info
 from sqlalchemy.orm import Session
 
+from crud.text import text_crud
 from crud.user import user_crud
 from models.user import User, UserRole
 from schemas.user import UserCreate, UserUpdate, UserRoleResponse
@@ -133,10 +134,56 @@ def delete_user(db: Session, current_user: User, user_id: int) -> None:
 
 
 def search_users(
-    db: Session, current_user: User, q: str, skip: int = 0, limit: int = 100
+    db: Session,
+    current_user: User,
+    q: str,
+    skip: int = 0,
+    limit: int = 100,
+    text_id: Optional[int] = None,
 ) -> List[User]:
-    """Search users (admin only)."""
-    return user_crud.search(db=db, query=q, skip=skip, limit=limit)
+    """Search users for admin management or text sharing."""
+    if current_user.role == UserRole.ADMIN:
+        if text_id is None:
+            return user_crud.search(db=db, query=q, skip=skip, limit=limit)
+
+        text = text_crud.get(db=db, text_id=text_id)
+        if not text:
+            raise HTTPException(
+                status_code=status.HTTP_404_NOT_FOUND,
+                detail="Text not found",
+            )
+        return user_crud.search_share_candidates(
+            db=db,
+            query=q,
+            skip=skip,
+            limit=limit,
+            exclude_user_id=text.uploaded_by,
+        )
+
+    if text_id is None:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Admin access required",
+        )
+
+    text = text_crud.get(db=db, text_id=text_id)
+    if not text:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="Text not found",
+        )
+    if text.uploaded_by != current_user.id:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="Only the text owner or an admin can search users for sharing",
+        )
+    return user_crud.search_share_candidates(
+        db=db,
+        query=q,
+        skip=skip,
+        limit=limit,
+        exclude_user_id=text.uploaded_by,
+    )
 
 
 def debug_auth0_integration(access_token: str) -> dict:

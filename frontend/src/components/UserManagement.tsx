@@ -214,8 +214,7 @@ export function UserManagement({ className }: UserManagementProps) {
     );
   } else {
     usersListBody = (
-      <div className="overflow-x-auto rounded-lg border border-gray-200">
-        <table className="w-full border-collapse">
+        <table className="overflow-x-auto w-full border-collapse">
           <caption className="sr-only">User management table</caption>
           <thead>
             <tr className="bg-gray-50 border-b border-gray-200">
@@ -270,62 +269,60 @@ export function UserManagement({ className }: UserManagementProps) {
             ))}
           </tbody>
         </table>
-      </div>
     );
   }
 
   return (
-    <Card className={className}>
-      <CardHeader>
-        <CardTitle className="flex items-center gap-2">
+    <div className={`${className} flex flex-col h-[calc(100dvh-100px)] p-4`}>
+      <div className="mb-6">
+        <div className="flex items-center gap-2 mb-1">
           <IoPeople className="w-5 h-5" />
-          User Management
-        </CardTitle>
-        <CardDescription>
-          Manage user accounts, roles, and permissions
-        </CardDescription>
-      </CardHeader>
-      <CardContent>
-        {/* Search and Filters */}
-        <div className="flex flex-col md:flex-row gap-4 mb-6">
-          <div className="relative flex-1">
-            <IoSearch className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
-            <input
-              type="text"
-              placeholder="Search users by username or email..."
-              value={searchQuery}
-              onChange={(e) => handleSearch(e.target.value)}
-              className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-            />
-          </div>
-          <select
-            value={selectedRole}
-            onChange={(e) =>
-              setSelectedRole(e.target.value as UserRole | "all")
-            }
-            className="w-full md:w-40 pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="all">All Roles</option>
-            <option value="admin">Admin</option>
-            <option value="reviewer">Reviewer</option>
-            <option value="annotator">Annotator</option>
-            <option value="user">User</option>
-          </select>
-          <select
-            value={selectedStatus}
-            onChange={(e) =>
-              setSelectedStatus(e.target.value as "all" | "active" | "inactive")
-            }
-            className="w-full md:w-40 pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
-          >
-            <option value="all">All Status</option>
-            <option value="active">Active</option>
-            <option value="inactive">Inactive</option>
-          </select>
+          <h2 className="text-lg font-semibold">User Management</h2>
         </div>
-
-        {usersListBody}
-      </CardContent>
-    </Card>
+        <p className="text-gray-500 text-sm">
+          Manage user accounts, roles, and permissions
+        </p>
+      </div>
+      {/* Search and Filters */}
+      <div className="flex flex-col md:flex-row gap-4 mb-6">
+        <div className="relative flex-1">
+          <IoSearch className="absolute left-3 top-3 h-4 w-4 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search users by username or email..."
+            value={searchQuery}
+            onChange={(e) => handleSearch(e.target.value)}
+            className="w-full pl-10 pr-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+          />
+        </div>
+        <select
+          value={selectedRole}
+          onChange={(e) =>
+            setSelectedRole(e.target.value as UserRole | "all")
+          }
+          className="w-full md:w-40 pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="all">All Roles</option>
+          <option value="admin">Admin</option>
+          <option value="reviewer">Reviewer</option>
+          <option value="annotator">Annotator</option>
+          <option value="user">User</option>
+        </select>
+        <select
+          value={selectedStatus}
+          onChange={(e) =>
+            setSelectedStatus(e.target.value as "all" | "active" | "inactive")
+          }
+          className="w-full md:w-40 pl-3 pr-10 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-blue-500 focus:border-transparent"
+        >
+          <option value="all">All Status</option>
+          <option value="active">Active</option>
+          <option value="inactive">Inactive</option>
+        </select>
+      </div>
+      <div className="h-full overflow-y-auto">
+      {usersListBody}
+      </div>
+    </div>
   );
 }

@@ -903,7 +903,7 @@ export const Editor = forwardRef<EditorRef, EditorProps>(
     }, [annotations.length, editorReady]); // Only when annotation count changes
 
     return (
-      <div className="flex-1 min-h-[200px] h-full bg-white rounded-lg shadow-lg relative">
+      <div className="flex-1 pt-4 min-h-[200px] h-full bg-white rounded-lg shadow-lg relative">
         <CodeMirror
           ref={editorRef}
           value={textRef.current}

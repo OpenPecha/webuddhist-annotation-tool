@@ -1,9 +1,12 @@
 import { Button } from "./ui/button";
 import type { Annotation } from "@/utils/annotationConverter";
-import type { TextWithAnnotations, UserRole } from "@/api/types";
+import type {
+  TextPermissionResponse,
+  TextWithAnnotations,
+  UserRole,
+} from "@/api/types";
 import {
   IoSend,
-  IoPlaySkipForward,
   IoArrowUndo,
   IoRefresh,
   IoTrashOutline,
@@ -11,12 +14,10 @@ import {
 } from "react-icons/io5";
 import { useNavigate } from "react-router-dom";
 import { DocumentExportDropdown } from "@/components/DocumentExportDropdown";
-import type { TextPermissionResponse } from "@/api/types";
 
 type ActionButtonsProps = {
   readonly annotations: Annotation[];
   readonly onSubmitTask: () => void;
-  readonly onSkipText?: () => void;
   readonly onUndoAnnotations?: () => void;
   readonly onRevertWork?: () => void;
   readonly onExport?: (format: "json" | "tei") => void;
@@ -33,7 +34,6 @@ type ActionButtonsProps = {
   readonly canManagePermissions?: boolean;
   readonly sharedPermissions?: TextPermissionResponse[];
   readonly onSharePermission?: () => void;
-  readonly onRevokePermission?: () => void;
   readonly isUpdatingPermissions?: boolean;
   readonly isSubmitting?: boolean;
   readonly isSkipping?: boolean;
@@ -44,7 +44,6 @@ type ActionButtonsProps = {
 function ActionButtons({
   annotations,
   onSubmitTask,
-  onSkipText,
   onUndoAnnotations,
   onRevertWork,
   onExport,
@@ -60,7 +59,6 @@ function ActionButtons({
   canManagePermissions = false,
   sharedPermissions = [],
   onSharePermission,
-  onRevokePermission,
   isUpdatingPermissions = false,
   isSubmitting = false,
   isSkipping = false,
@@ -75,12 +73,6 @@ function ActionButtons({
   
   // Determine if user can only export (regular user)
   const canOnlyExport = userRole === "user";
-
-  const handleSkip = () => {
-    if (onSkipText) {
-      onSkipText();
-    }
-  };
 
   const handleRevert = () => {
     if (onRevertWork) {
@@ -156,26 +148,19 @@ function ActionButtons({
       {canManagePermissions && (
         <div className="rounded-md border border-border p-2 space-y-2">
           <p className="text-xs text-muted-foreground">
-            Shared users: {sharedPermissions.length}
+            {sharedPermissions.length > 0
+              ? `${sharedPermissions.length} ${sharedPermissions.length === 1 ? "person has" : "people have"} access`
+              : "Only you have access right now"}
           </p>
-          <div className="flex gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onSharePermission}
-              disabled={isUpdatingPermissions}
-            >
-              Grant / Update
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={onRevokePermission}
-              disabled={isUpdatingPermissions}
-            >
-              Revoke
-            </Button>
-          </div>
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={onSharePermission}
+            disabled={isUpdatingPermissions}
+            className="w-full"
+          >
+            Share Text
+          </Button>
         </div>
       )}
 

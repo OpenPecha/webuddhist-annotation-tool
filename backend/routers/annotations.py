@@ -6,12 +6,13 @@ from fastapi import APIRouter, Depends, Query
 from sqlalchemy.orm import Session
 
 from deps import get_db
-from auth import get_current_active_user
+from auth import get_current_active_user, require_admin
 from models.user import User
 from schemas.annotation import (
     AnnotationCreate,
     AnnotationUpdate,
     AnnotationResponse,
+    CustomAnnotationListResponse,
     ValidatePositionsRequest,
     BulkCreateAnnotationsRequest,
     BulkDeleteByCriteriaRequest,
@@ -105,6 +106,15 @@ def get_annotation_stats(
     return annotations_controller.get_annotation_stats(
         db, current_user, text_id=text_id
     )
+
+
+@router.get("/custom-labels", response_model=List[CustomAnnotationListResponse])
+def read_custom_annotation_labels(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """Get unique custom annotation labels used by users but missing from the annotation list."""
+    return annotations_controller.read_custom_annotation_labels(db, current_user)
 
 
 @router.get("/{annotation_id}", response_model=AnnotationResponse)

@@ -47,7 +47,7 @@ export const useUser = (userId: number, enabled = true) => {
  */
 export const useSearchUsers = (query: string, filters?: UserFilters) => {
   return useQuery<UserResponse[]>({
-    queryKey: queryKeys.users.search(query),
+    queryKey: [...queryKeys.users.search(query), filters],
     queryFn: () => usersApi.searchUsers(query, filters),
     enabled: query.length > 0,
     staleTime: 1000 * 30, // 30 seconds

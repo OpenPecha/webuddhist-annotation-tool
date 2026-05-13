@@ -10,6 +10,7 @@ import ActionButtons from "@/components/ActionButtons";
 import { SkipConfirmationDialog } from "@/components/SkipConfirmationDialog";
 import { DiplomaticTextPanel } from "@/components/DiplomaticTextPanel";
 import { AnnotationColorSettings } from "@/components/AnnotationColorSettings";
+import { TextPermissionDialog } from "@/components/TextPermissionDialog";
 import { TaskLoadingState, TaskErrorState } from "@/components/Task";
 import {
   useTextWithAnnotations,
@@ -57,6 +58,8 @@ const Index = () => {
   } = useAnnotationFiltersStore();
 
   const [diplomaticPanelOpen, setDiplomaticPanelOpen] = useState(false);
+  const [isPermissionDialogOpen, setIsPermissionDialogOpen] = useState(false);
+  const [revokingPermissionUserId, setRevokingPermissionUserId] = useState<number | null>(null);
   const location = useLocation();
   const queryClient = useQueryClient();
 
@@ -152,7 +155,6 @@ const Index = () => {
    */
   const {
     handleSubmitTask,
-    handleSkipText,
     handleConfirmSkip,
     handleCancelSkip,
     handleRevertWork,
@@ -230,24 +232,22 @@ const Index = () => {
 
   const handleSharePermission = () => {
     if (!parsedTextId || !isShareManager) return;
-    const granteeInput = window.prompt("Enter grantee user ID");
-    if (!granteeInput) return;
-    const granteeUserId = Number(granteeInput);
-    if (!Number.isInteger(granteeUserId) || granteeUserId <= 0) {
-      toast.error("Invalid user ID");
-      return;
-    }
-    const permissionInput = window
-      .prompt('Permission ("read" or "write")', "read")
-      ?.toLowerCase();
-    if (permissionInput !== "read" && permissionInput !== "write") {
-      toast.error('Permission must be "read" or "write"');
-      return;
-    }
+    setIsPermissionDialogOpen(true);
+  };
+
+  const handleSubmitSharePermission = ({
+    granteeUserId,
+    permission,
+  }: {
+    granteeUserId: number;
+    permission: "read" | "write";
+  }) => {
     upsertTextPermissionMutation.mutate(
-      { grantee_user_id: granteeUserId, permission: permissionInput },
+      { grantee_user_id: granteeUserId, permission },
       {
-        onSuccess: () => toast.success("Permission updated"),
+        onSuccess: () => {
+          toast.success("Permission updated");
+        },
         onError: (err) =>
           toast.error("Failed to update permission", {
             description: err instanceof Error ? err.message : "Please try again.",
@@ -256,21 +256,16 @@ const Index = () => {
     );
   };
 
-  const handleRevokePermission = () => {
+  const handleRevokePermission = (granteeUserId: number) => {
     if (!parsedTextId || !isShareManager) return;
-    const granteeInput = window.prompt("Enter grantee user ID to revoke");
-    if (!granteeInput) return;
-    const granteeUserId = Number(granteeInput);
-    if (!Number.isInteger(granteeUserId) || granteeUserId <= 0) {
-      toast.error("Invalid user ID");
-      return;
-    }
+    setRevokingPermissionUserId(granteeUserId);
     deleteTextPermissionMutation.mutate(granteeUserId, {
       onSuccess: () => toast.success("Permission removed"),
       onError: (err) =>
         toast.error("Failed to remove permission", {
           description: err instanceof Error ? err.message : "Please try again.",
         }),
+      onSettled: () => setRevokingPermissionUserId(null),
     });
   };
 
@@ -432,7 +427,6 @@ const Index = () => {
             onSubmitTask={handleSubmitTask}
             isSubmitting={isSubmitting}
             isCompletedTask={isCompletedTask}
-            onSkipText={handleSkipText}
             isSkipping={isSkipping}
             isUndoing={isUndoing}
             onUndoAnnotations={handleUndoAnnotations}
@@ -451,7 +445,6 @@ const Index = () => {
             canManagePermissions={isShareManager}
             sharedPermissions={sharedPermissions}
             onSharePermission={handleSharePermission}
-            onRevokePermission={handleRevokePermission}
             isUpdatingPermissions={
               upsertTextPermissionMutation.isPending || deleteTextPermissionMutation.isPending
             }
@@ -478,6 +471,19 @@ const Index = () => {
         textTitle={textData?.title}
         isSkipping={isSkipping}
       />
+
+      {parsedTextId && (
+        <TextPermissionDialog
+          isOpen={isPermissionDialogOpen}
+          textId={parsedTextId}
+          isSubmitting={upsertTextPermissionMutation.isPending}
+          isRevokingUserId={revokingPermissionUserId}
+          existingPermissions={sharedPermissions}
+          onClose={() => setIsPermissionDialogOpen(false)}
+          onSubmit={handleSubmitSharePermission}
+          onRevoke={handleRevokePermission}
+        />
+      )}
 
       {/* Floating annotation color settings */}
       <AnnotationColorSettings />

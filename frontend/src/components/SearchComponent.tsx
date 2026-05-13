@@ -184,7 +184,7 @@ export const SearchComponent: React.FC<SearchComponentProps> = ({
   if (!isVisible) return null;
 
   return (
-    <div className="w-full  bg-white  p-2 rounded-md   shadow-sm z-50">
+    <div className="w-full mb-4 bg-white  p-2 rounded-md   shadow-sm z-50">
 
       {/* Main Search Row */}
       <div className="flex-1  flex items-center gap-3 ">

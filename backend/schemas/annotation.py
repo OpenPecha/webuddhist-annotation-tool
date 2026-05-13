@@ -136,3 +136,14 @@ class AnnotationResponse(AnnotationBase):
     created_at: datetime
     updated_at: Optional[datetime] = None
     is_agreed: Optional[bool] = False  # Whether annotation has been agreed upon by a reviewer
+
+
+class CustomAnnotationListResponse(BaseModel):
+    label: str
+    annotation_type_id: Optional[str] = None
+    annotation_type_name: Optional[str] = None
+    usage_count: int
+    user_count: int
+    text_count: int
+    first_seen_at: datetime
+    last_seen_at: datetime

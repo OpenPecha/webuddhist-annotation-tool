@@ -29,6 +29,7 @@ export const queryKeys = {
     forAnnotation: ["texts-for-annotation"] as const,
     forReview: ["texts-for-review"] as const,
     myWorkInProgress: ["my-work-in-progress"] as const,
+    sharedWithMe: ["shared-with-me"] as const,
     myRejectedTexts: ["my-rejected-texts"] as const,
     recentActivity: (limit?: number) => limit ? ["recent-activity", limit] as const : ["recent-activity"] as const,
     stats: ["text-stats"] as const,

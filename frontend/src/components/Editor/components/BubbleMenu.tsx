@@ -288,7 +288,8 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
     effectiveModeForCursor === "table-of-contents"
       ? selectedStructuralType !== null
       : selectedBubbleAnnotationType !== null && selectedErrorCategory !== null;
-
+      const disableOtherOptionsFrom=['animacy', 'pos', 'semantic roles feature']
+      const disableOtherOptions = !disableOtherOptionsFrom.includes(selectedBubbleAnnotationType?.name.toLowerCase() || '')  ;
   const modalContent = (
     <div
       className="fixed bg-white border border-gray-200 rounded-lg shadow-xl p-4 z-50 w-[380px] max-w-[90vw] overflow-hidden"
@@ -386,7 +387,7 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
                   </p>
                 )}
               {/* Add your own annotation - error-list mode */}
-              {effectiveModeForCursor === "error-list" && selectedBubbleAnnotationType && !isCreatingAnnotation && (
+              {disableOtherOptions &&effectiveModeForCursor === "error-list" && selectedBubbleAnnotationType && !isCreatingAnnotation && (
                 <div className="mt-2 flex gap-2">
                   <input
                     type="text"

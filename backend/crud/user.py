@@ -85,6 +85,31 @@ class UserCRUD:
         )
         return db.query(User).filter(search_filter).offset(skip).limit(limit).all()
 
+    def search_share_candidates(
+        self,
+        db: Session,
+        query: str,
+        skip: int = 0,
+        limit: int = 10,
+        exclude_user_id: Optional[int] = None,
+    ) -> List[User]:
+        """Search active users with email addresses for sharing suggestions."""
+        normalized_query = query.strip()
+        search_filter = or_(
+            User.username.ilike(f"%{normalized_query}%"),
+            User.email.ilike(f"%{normalized_query}%"),
+            User.full_name.ilike(f"%{normalized_query}%"),
+        )
+        db_query = (
+            db.query(User)
+            .filter(User.is_active == True)
+            .filter(User.email.isnot(None))
+            .filter(search_filter)
+        )
+        if exclude_user_id is not None:
+            db_query = db_query.filter(User.id != exclude_user_id)
+        return db_query.order_by(User.email.asc()).offset(skip).limit(limit).all()
+
     def is_username_taken(self, db: Session, username: str, exclude_user_id: Optional[int] = None) -> bool:
         """Check if username is already taken."""
         query = db.query(User).filter(User.username == username)

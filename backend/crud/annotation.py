@@ -1,9 +1,11 @@
 from typing import List, Optional, Tuple
 from sqlalchemy.orm import Session
-from sqlalchemy import func
+from sqlalchemy import and_, func
 from models.annotation import Annotation
 from models.text import Text, INITIALIZED, ANNOTATED, PROGRESS
 from models.annotation_review import AnnotationReview
+from models.annotation_list import AnnotationList
+from models.annotation_type import AnnotationType
 from schemas.annotation import AnnotationCreate, AnnotationUpdate
 
 
@@ -394,6 +396,60 @@ class AnnotationCRUD:
                     db.add(text)
             db.commit()
         return deleted
+
+    def get_custom_annotation_labels(self, db: Session) -> List[dict]:
+        """Get user-created annotation labels that are missing from the canonical annotation list."""
+        normalized_label = func.lower(func.trim(Annotation.label))
+        normalized_title = func.lower(func.trim(AnnotationList.title))
+
+        rows = (
+            db.query(
+                func.min(Annotation.label).label("label"),
+                Text.annotation_type_id.label("annotation_type_id"),
+                AnnotationType.name.label("annotation_type_name"),
+                func.count(Annotation.id).label("usage_count"),
+                func.count(func.distinct(Annotation.annotator_id)).label("user_count"),
+                func.count(func.distinct(Annotation.text_id)).label("text_count"),
+                func.min(Annotation.created_at).label("first_seen_at"),
+                func.max(Annotation.created_at).label("last_seen_at"),
+            )
+            .join(Text, Text.id == Annotation.text_id)
+            .outerjoin(AnnotationType, AnnotationType.id == Text.annotation_type_id)
+            .outerjoin(
+                AnnotationList,
+                and_(
+                    AnnotationList.type_id == Text.annotation_type_id,
+                    normalized_title == normalized_label,
+                ),
+            )
+            .filter(Annotation.annotator_id.isnot(None))
+            .filter(Text.annotation_type_id.isnot(None))
+            .filter(Annotation.label.isnot(None))
+            .filter(func.trim(Annotation.label) != "")
+            .filter(AnnotationList.id.is_(None))
+            .group_by(
+                normalized_label,
+                Text.annotation_type_id,
+                AnnotationType.name,
+            )
+            .order_by(func.max(Annotation.created_at).desc())
+            .all()
+        )
+
+        return [
+            {
+                "label": row.label,
+                "annotation_type_id": row.annotation_type_id,
+                "annotation_type_name": row.annotation_type_name,
+                "usage_count": int(row.usage_count or 0),
+                "user_count": int(row.user_count or 0),
+                "text_count": int(row.text_count or 0),
+                "first_seen_at": row.first_seen_at,
+                "last_seen_at": row.last_seen_at,
+            }
+            for row in rows
+            if row.label
+        ]
 
     def get_annotation_stats(self, db: Session, text_id: Optional[int] = None) -> dict:
         """Get annotation statistics."""

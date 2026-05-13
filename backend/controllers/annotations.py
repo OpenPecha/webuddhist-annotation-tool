@@ -120,6 +120,11 @@ def get_annotation_stats(
     return annotation_crud.get_annotation_stats(db=db, text_id=text_id)
 
 
+def read_custom_annotation_labels(db: Session, current_user: User) -> List[dict]:
+    """Get unique user-created annotation labels missing from the canonical annotation list."""
+    return annotation_crud.get_custom_annotation_labels(db=db)
+
+
 def read_annotation(db: Session, current_user: User, annotation_id: int):
     """Get annotation by ID."""
     annotation = annotation_crud.get(db=db, annotation_id=annotation_id)

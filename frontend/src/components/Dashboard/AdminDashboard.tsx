@@ -23,6 +23,11 @@ const AdminAnnotationRecordsSection = React.lazy(() =>
     default: module.AdminAnnotationRecordsSection,
   }))
 );
+const AdminCustomAnnotationsSection = React.lazy(() =>
+  import("./AdminCustomAnnotationsSection").then((module) => ({
+    default: module.AdminCustomAnnotationsSection,
+  }))
+);
 
 export const AdminDashboard: React.FC = () => {
   const [activeAdminTab, setActiveAdminTab] = useState<AdminTab>("statistics");
@@ -34,6 +39,7 @@ export const AdminDashboard: React.FC = () => {
       import("./AdminStatisticsSection");
       import("./AdminUsersSection");
       import("./AdminAnnotationRecordsSection");
+      import("./AdminCustomAnnotationsSection");
     }, 100);
     return () => clearTimeout(timeoutId);
   }, []);
@@ -52,6 +58,9 @@ export const AdminDashboard: React.FC = () => {
         break;
       case "annotation-records":
         section = <AdminAnnotationRecordsSection />;
+        break;
+      case "custom-annotations":
+        section = <AdminCustomAnnotationsSection />;
         break;
       default:
         section = <AdminStatisticsSection />;

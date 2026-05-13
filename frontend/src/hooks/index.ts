@@ -7,6 +7,7 @@ export {
   useTextsForAnnotation,
   useTextsForReview,
   useMyWorkInProgress,
+  useSharedTexts,
   useMyRejectedTexts,
   useRecentActivity,
   useTextStats,

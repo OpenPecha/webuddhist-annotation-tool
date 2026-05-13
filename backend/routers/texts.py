@@ -9,6 +9,7 @@ from deps import get_db
 from auth import get_current_active_user, require_admin, require_reviewer
 from models.user import User
 from schemas.text import (
+    AdminTextStatistics,
     TextCreate,
     TextUpdate,
     TextResponse,
@@ -131,7 +132,7 @@ def get_my_rejected_texts(
     return texts_controller.get_my_rejected_texts(db, current_user)
 
 
-@router.get("/admin/text-statistics")
+@router.get("/admin/text-statistics", response_model=AdminTextStatistics)
 def get_admin_text_statistics(
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
@@ -169,6 +170,19 @@ def get_my_work_in_progress(
 ):
     """Get texts that the current user can write to."""
     return texts_controller.get_my_work_in_progress(
+        db, current_user, skip=skip, limit=limit
+    )
+
+
+@router.get("/shared-with-me", response_model=List[TextListResponse])
+def get_shared_texts(
+    skip: int = Query(0, ge=0),
+    limit: int = Query(100, ge=1, le=1000),
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Get texts explicitly shared with the current user."""
+    return texts_controller.get_shared_texts(
         db, current_user, skip=skip, limit=limit
     )
 

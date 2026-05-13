@@ -139,6 +139,12 @@ export const textApi = {
     return apiClient.get<TextResponse[]>("/texts/my-work-in-progress", filters);
   },
 
+  getSharedTexts: async (
+    filters: { skip?: number; limit?: number } = {}
+  ): Promise<TextResponse[]> => {
+    return apiClient.get<TextResponse[]>("/texts/shared-with-me", filters);
+  },
+
   // Submit task - mark text as annotated and get next task (for annotators)
   submitTask: async (id: number): Promise<TaskSubmissionResponse> => {
     return apiClient.post<TaskSubmissionResponse>(`/texts/${id}/submit-task`);

@@ -1,5 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
-import { annotationsApi } from "@/api/annotations";
+import {
+  annotationsApi,
+  type CustomAnnotationLabelResponse,
+} from "@/api/annotations";
 import { queryKeys } from "@/constants/queryKeys";
 import type {
   AnnotationResponse,
@@ -85,6 +88,17 @@ export const useAnnotationStats = (textId?: number) => {
     queryKey: queryKeys.annotations.stats(textId),
     queryFn: () => annotationsApi.getAnnotationStats(textId),
     staleTime: 1000 * 60, // 1 minute
+  });
+};
+
+/**
+ * Get unique custom annotation labels used by users but missing from the canonical annotation list.
+ */
+export const useCustomAnnotationLabels = () => {
+  return useQuery<CustomAnnotationLabelResponse[]>({
+    queryKey: [...queryKeys.annotations.all, "custom-labels"],
+    queryFn: () => annotationsApi.getCustomAnnotationLabels(),
+    staleTime: 1000 * 60,
   });
 };
 

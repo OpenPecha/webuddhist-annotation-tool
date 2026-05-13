@@ -100,6 +100,18 @@ export const useMyWorkInProgress = (filters?: { skip?: number; limit?: number })
 };
 
 /**
+ * Get texts explicitly shared with the current user.
+ */
+export const useSharedTexts = (filters?: { skip?: number; limit?: number }) => {
+  return useQuery<TextResponse[]>({
+    queryKey: [...queryKeys.texts.sharedWithMe, filters],
+    queryFn: () => textApi.getSharedTexts(filters),
+    staleTime: 1000 * 30,
+    refetchOnWindowFocus: true,
+  });
+};
+
+/**
  * Get current user's rejected/skipped texts
  */
 export const useMyRejectedTexts = () => {

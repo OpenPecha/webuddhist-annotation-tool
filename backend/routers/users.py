@@ -122,8 +122,11 @@ def search_users(
     q: str = Query(..., min_length=1),
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
+    text_id: Optional[int] = Query(None, ge=1),
     db: Session = Depends(get_db),
-    current_user: User = Depends(require_admin),
+    current_user: User = Depends(get_current_active_user),
 ):
-    """Search users (Admin only)."""
-    return users_controller.search_users(db, current_user, q, skip=skip, limit=limit)
+    """Search users for admin management or text sharing."""
+    return users_controller.search_users(
+        db, current_user, q, skip=skip, limit=limit, text_id=text_id
+    )

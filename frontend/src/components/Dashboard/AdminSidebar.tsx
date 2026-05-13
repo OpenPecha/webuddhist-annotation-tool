@@ -9,7 +9,12 @@ import {
   IoChevronForward,
 } from "react-icons/io5";
 
-export type AdminTab = "statistics" | "tasks" | "users" | "annotation-records";
+export type AdminTab =
+  | "statistics"
+  | "tasks"
+  | "users"
+  | "annotation-records"
+  | "custom-annotations";
 
 interface AdminSidebarProps {
   sidebarOpen: boolean;
@@ -144,6 +149,12 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             <IoDocumentText className="h-4 w-4" />,
             "Annotation List",
             "Filter by creator, date, and type"
+          )}
+          {navBtn(
+            "custom-annotations",
+            <IoDocumentText className="h-4 w-4" />,
+            "Custom Annotations List",
+            "Review user-added labels outside the list"
           )}
         </nav>
       </div>

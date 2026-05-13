@@ -110,6 +110,7 @@ class TextListResponse(BaseModel):
     annotation_type_id: Optional[str] = None
     reviewer_id: Optional[int] = None
     uploaded_by: Optional[int] = None
+    current_user_permission: Optional[str] = None
     created_at: datetime
     updated_at: Optional[datetime] = None
     
@@ -160,3 +161,49 @@ class TextPermissionResponse(BaseModel):
     created_at: datetime
     updated_at: Optional[datetime] = None
     grantee: Optional[UserBasic] = None
+
+
+class AdminStaffRoleCounts(BaseModel):
+    admin: int
+    annotator: int
+    reviewer: int
+
+
+class AdminStaffWorkTotals(BaseModel):
+    texts_annotated: int
+    reviews_completed: int
+    work_in_progress: int
+    uploaded_files: int
+
+
+class AdminStaffDetail(BaseModel):
+    id: int
+    username: str
+    full_name: Optional[str] = None
+    role: Literal["admin", "annotator", "reviewer"]
+    texts_annotated: int
+    reviews_completed: int
+    work_in_progress: int
+    uploaded_files: int
+
+
+class AdminTextStatistics(BaseModel):
+    total: int
+    initialized: int
+    annotated: int
+    reviewed: int
+    reviewed_needs_revision: int = 0
+    skipped: int
+    progress: int
+    total_rejections: int
+    unique_rejected_texts: int
+    heavily_rejected_texts: int
+    total_active_users: int
+    total_staff_users: int
+    staff_role_counts: AdminStaffRoleCounts
+    staff_work_totals: AdminStaffWorkTotals
+    staff_details: list[AdminStaffDetail]
+    available_for_new_users: int
+    completion_rate: float
+    rejection_rate: float
+    avg_rejections_per_text: float

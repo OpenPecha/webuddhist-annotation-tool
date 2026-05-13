@@ -14,6 +14,17 @@ import type {
   BulkDeleteAnnotationsResponse,
 } from "./types";
 
+export interface CustomAnnotationLabelResponse {
+  label: string;
+  annotation_type_id?: string;
+  annotation_type_name?: string;
+  usage_count: number;
+  user_count: number;
+  text_count: number;
+  first_seen_at: string;
+  last_seen_at: string;
+}
+
 // Annotations API client
 export const annotationsApi = {
   // Get all annotations with optional filtering
@@ -84,6 +95,11 @@ export const annotationsApi = {
   getAnnotationStats: async (textId?: number): Promise<AnnotationStats> => {
     const params = textId ? { text_id: textId } : {};
     return apiClient.get<AnnotationStats>("/annotations/stats", params);
+  },
+
+  // Get unique custom annotation labels used by users but missing from the canonical annotation list
+  getCustomAnnotationLabels: async (): Promise<CustomAnnotationLabelResponse[]> => {
+    return apiClient.get<CustomAnnotationLabelResponse[]>("/annotations/custom-labels");
   },
 
   // Validate annotation positions
