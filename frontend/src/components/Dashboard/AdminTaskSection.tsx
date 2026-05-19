@@ -1,5 +1,5 @@
 import React, { useState } from "react";
-import { useMutation } from "@tanstack/react-query";
+import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router-dom";
 import {
   Card,
@@ -25,6 +25,8 @@ import { TextStatus } from "@/api/types";
 import type { TextFilters } from "@/api/types";
 import { toast } from "sonner";
 import { useTexts, useDeleteText } from "@/hooks";
+import { AdminDocumentUpload } from "./AdminDocumentUpload";
+import { queryKeys } from "@/constants/queryKeys";
 import { textApi } from "@/api/text";
 import {
   exportAsJsonFile,
@@ -98,6 +100,7 @@ const ITEMS_PER_PAGE = 10;
 
 export const AdminTaskSection: React.FC = () => {
   const navigate = useNavigate();
+  const queryClient = useQueryClient();
   const [currentPage, setCurrentPage] = useState(1);
   const skip = (currentPage - 1) * ITEMS_PER_PAGE;
 
@@ -203,15 +206,22 @@ export const AdminTaskSection: React.FC = () => {
       ? "No documents on this page."
       : `Showing ${texts.length} document${texts.length === 1 ? "" : "s"} on page ${currentPage}.`;
 
-  return (
-     
+  const handleDocumentUploaded = () => {
+    setCurrentPage(1);
+    queryClient.invalidateQueries({ queryKey: queryKeys.texts.all });
+    queryClient.invalidateQueries({ queryKey: queryKeys.texts.adminStats });
+  };
 
-      <Card className=" border-border/80 rounded-none bg-card/90 shadow-[0_24px_48px_-28px_oklch(0.35_0.04_65/0.25)] backdrop-blur-sm">
+  return (
+    <div className="flex h-full flex-col gap-6 overflow-auto p-6">
+      <AdminDocumentUpload onUploaded={handleDocumentUploaded} />
+
+      <Card className="flex-1 border-border/80 rounded-none bg-card/90 shadow-[0_24px_48px_-28px_oklch(0.35_0.04_65/0.25)] backdrop-blur-sm">
         <CardHeader className="border-b border-border/60 bg-gradient-to-br from-card to-muted/20 pb-6">
           <div className="flex flex-wrap items-end justify-between gap-4">
             <div>
               <CardTitle className="font-display text-xl font-semibold">
-                Task listing
+                All documents
               </CardTitle>
               <CardDescription className="mt-1.5 max-w-xl text-pretty">
                 {listingDescription}
@@ -228,7 +238,7 @@ export const AdminTaskSection: React.FC = () => {
               <IoDocumentText className="mb-4 h-14 w-14 text-muted-foreground/40" />
               <p className="font-medium text-foreground">No documents here</p>
               <p className="mt-1 max-w-sm text-sm text-muted-foreground">
-                Try another page, or add texts from the main workflow.
+                Upload a document above, or try another page.
               </p>
             </div>
           ) : (
@@ -276,7 +286,9 @@ export const AdminTaskSection: React.FC = () => {
                           </div>
                           <div className="flex flex-wrap gap-x-4 gap-y-1 text-xs text-muted-foreground">
                             <span>Uploaded by {uploaderName}</span>
-                            {annotatorName && <span>Annotator · {annotatorName}</span>}
+                            <span>
+                              Annotator · {annotatorName ?? "Unassigned"}
+                            </span>
                             {reviewerName && <span>Reviewer · {reviewerName}</span>}
                           </div>
                         </div>
@@ -375,5 +387,6 @@ export const AdminTaskSection: React.FC = () => {
           )}
         </CardContent>
       </Card>
+    </div>
   );
 };

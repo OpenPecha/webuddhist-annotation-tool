@@ -52,4 +52,19 @@ class UserRoleResponse(BaseModel):
     model_config = ConfigDict(from_attributes=True)
 
     role: UserRole
-    user_id: int 
+    user_id: int
+
+
+class AdminManualUserCreate(BaseModel):
+    """Admin-created staff user; upserted by email."""
+
+    email: EmailStr
+    username: str
+    full_name: str
+    role: UserRole
+
+
+class ManualUserUpsertResponse(UserResponse):
+    """User record plus whether it was newly created or updated by email."""
+
+    created: bool 

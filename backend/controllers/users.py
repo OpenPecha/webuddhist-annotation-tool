@@ -11,7 +11,14 @@ from sqlalchemy.orm import Session
 from crud.text import text_crud
 from crud.user import user_crud
 from models.user import User, UserRole
-from schemas.user import UserCreate, UserUpdate, UserRoleResponse
+from schemas.user import (
+    AdminManualUserCreate,
+    ManualUserUpsertResponse,
+    UserCreate,
+    UserResponse,
+    UserUpdate,
+    UserRoleResponse,
+)
 
 
 
@@ -61,6 +68,37 @@ def update_me(db: Session, current_user: User, user_in: UserUpdate) -> User:
     return user_crud.update(db=db, db_obj=current_user, obj_in=user_in)
 
 
+def upsert_manual_user(
+    db: Session,
+    current_user: User,
+    user_in: AdminManualUserCreate,
+) -> ManualUserUpsertResponse:
+    """Create staff user or update role/status when email already exists (admin only)."""
+    if user_in.role == UserRole.USER:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail="Use a staff role (admin, reviewer, or annotator) for manual accounts",
+        )
+
+    try:
+        user, created = user_crud.upsert_manual_by_email(
+            db,
+            email=str(user_in.email),
+            username=user_in.username,
+            full_name=user_in.full_name,
+            role=user_in.role,
+        )
+    except ValueError as exc:
+        raise HTTPException(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            detail=str(exc),
+        ) from exc
+
+    return ManualUserUpsertResponse.model_validate(
+        {**UserResponse.model_validate(user).model_dump(), "created": created}
+    )
+
+
 def list_users(
     db: Session,
     current_user: User,
@@ -68,6 +106,7 @@ def list_users(
     limit: int = 100,
     is_active: Optional[bool] = None,
     role: Optional[UserRole] = None,
+    exclude_role: Optional[UserRole] = None,
 ) -> List[User]:
     """Get users list (admin only)."""
     return user_crud.get_multi(
@@ -75,7 +114,8 @@ def list_users(
         skip=skip,
         limit=limit,
         is_active=is_active,
-        role=role,
+        role=role.value if role else None,
+        exclude_role=exclude_role.value if exclude_role else None,
     )
 
 

@@ -72,6 +72,12 @@ class TextCRUD:
             return TEXT_PERMISSION_WRITE
         if text.uploaded_by == user_id:
             return TEXT_PERMISSION_WRITE
+        if text.annotator_id == user_id and text.status in (
+            PROGRESS,
+            ANNOTATED,
+            REVIEWED_NEEDS_REVISION,
+        ):
+            return TEXT_PERMISSION_WRITE
 
         shared = (
             db.query(TextPermission)
@@ -264,11 +270,8 @@ class TextCRUD:
         if user_role == "user":
             # USER role: only show texts they uploaded
             query = query.filter(Text.uploaded_by == user_id)
-        elif user_role == "annotator":
-            # ANNOTATOR role: only show texts not uploaded by any user (system texts)
-            query = query.filter(Text.uploaded_by.is_(None))
-        # ADMIN role: no additional filtering (can see all texts)
-        
+        # ADMIN / ANNOTATOR: admin-uploaded corpus (no per-user upload filter)
+
         return query.offset(skip).limit(limit).all()
 
     def get_texts_for_review(self, db: Session, skip: int = 0, limit: int = 100, reviewer_id: Optional[int] = None) -> List[Text]:
@@ -278,10 +281,7 @@ class TextCRUD:
             joinedload(Text.reviewer),
             joinedload(Text.uploader)
         ).filter(Text.status == ANNOTATED)
-        
-        # Only include system texts (exclude user-uploaded texts)
-        query = query.filter(Text.uploaded_by.is_(None))
-        
+
         # Exclude texts annotated by the current reviewer to prevent self-review
         if reviewer_id:
             query = query.filter(Text.annotator_id != reviewer_id)
@@ -311,53 +311,43 @@ class TextCRUD:
 
     def get_work_in_progress(self, db: Session, user_id: int, user_role: str = None) -> Optional[Text]:
         """Get text that user is currently working on (progress status)."""
-        if user_role == "annotator":
-            # For annotators, return text where source is not 'Bulk Upload'
+        if user_role in ("annotator", "admin", "reviewer"):
             return self._not_deleted(db.query(Text)).filter(
                 Text.annotator_id == user_id,
                 Text.status == PROGRESS,
-                Text.source == 'Bulk Upload'
             ).first()
-        elif user_role == "user":
+        if user_role == "user":
             return self._not_deleted(db.query(Text)).filter(
                 Text.annotator_id == user_id,
                 Text.status == PROGRESS,
-                Text.source != 'Bulk Upload'
             ).first()
-        else:
-            return None
+        return None
 
     def get_unassigned_text(self, db: Session) -> Optional[Text]:
-        """Get an unassigned text with initialized status."""
+        """Get an unassigned text available to claim (initialized or orphaned in-progress)."""
         return self._not_deleted(db.query(Text)).filter(
-            Text.status == INITIALIZED,
-            Text.annotator_id.is_(None)
+            Text.annotator_id.is_(None),
+            Text.status.in_([INITIALIZED, PROGRESS]),
         ).first()
 
     def get_unassigned_text_for_user(self, db: Session, user_id: int, user_role: str = None) -> Optional[Text]:
-        """Get an unassigned text with initialized status that user hasn't rejected."""
+        """Get an unassigned text the user can claim (initialized or orphaned in-progress)."""
         from models.user_rejected_text import UserRejectedText
         
         # Get text IDs that user has rejected
         rejected_text_ids = (select(UserRejectedText.text_id).where(UserRejectedText.user_id == user_id))
         
-        # Base query for available texts
+        # Claimable: no annotator, ready or stuck in progress without an owner (e.g. TEI pre-import)
         query = self._not_deleted(db.query(Text)).filter(
-            Text.status == INITIALIZED,
             Text.annotator_id.is_(None),
+            Text.status.in_([INITIALIZED, PROGRESS]),
             ~Text.id.in_(rejected_text_ids)
         )
         
-        # Role-based filtering
         if user_role == "user":
-            # USER role: only show texts they uploaded
             query = query.filter(Text.uploaded_by == user_id)
-        elif user_role == "annotator":
-            # ANNOTATOR role: only show texts not uploaded by any user (system texts)
-            query = query.filter(Text.uploaded_by.is_(None))
-        # ADMIN role: no additional filtering (can see all texts)
-        
-        return query.first()
+
+        return query.order_by(Text.created_at.asc()).first()
 
     def assign_text_to_user(self, db: Session, text_id: int, user_id: int) -> Optional[Text]:
         """Assign a text to a user and set status to progress."""
@@ -371,22 +361,14 @@ class TextCRUD:
         return text
 
     def start_work(self, db: Session, user_id: int, user_role: str = None) -> Optional[Text]:
-        """Start work for a user - find work in progress or assign new text."""
-        # First, check if user has work in progress
-        work_in_progress = self.get_work_in_progress(db, user_id, user_role)
-        
-        if work_in_progress:
-            return work_in_progress
-        
-        if user_role == "user":
-            return None
-        
-        # If no work in progress, find an unassigned text (excluding rejected ones)
+        """Return work in progress only (no auto-assignment of new texts)."""
+        return self.get_work_in_progress(db, user_id, user_role)
+
+    def assign_me(self, db: Session, user_id: int, user_role: str = None) -> Optional[Text]:
+        """Claim one unassigned document (does not return existing assignments)."""
         unassigned_text = self.get_unassigned_text_for_user(db, user_id, user_role)
         if unassigned_text:
             return self.assign_text_to_user(db, unassigned_text.id, user_id)
-        
-        # No texts available
         return None
 
     def get_recent_activity(self, db: Session, user_id: int, limit: int = 10, user_role: str = None) -> List[Text]:
@@ -521,12 +503,7 @@ class TextCRUD:
         current_text.status = INITIALIZED
         db.add(current_text)
         db.commit()
-        
-        # Find and assign the next available text (excluding rejected ones)
-        next_text = self.get_unassigned_text_for_user(db, user_id, user_role)
-        if next_text:
-            return self.assign_text_to_user(db, next_text.id, user_id)
-        
+
         return None
 
     def cancel_work(self, db: Session, user_id: int, text_id: int) -> bool:
@@ -573,12 +550,18 @@ class TextCRUD:
         )
         query = base_query.filter(
             or_(
+                Text.annotator_id == user_id,
                 Text.uploaded_by == user_id,
                 Text.id.in_(select(writable_shared.c.text_id)),
             )
         )
 
-        return query.order_by(Text.updated_at.desc().nullslast(), Text.created_at.desc()).offset(skip).limit(limit).all()
+        return (
+            query.order_by(Text.updated_at.desc().nullslast(), Text.created_at.desc())
+            .offset(skip)
+            .limit(limit)
+            .all()
+        )
 
     def get_shared_texts(
         self,

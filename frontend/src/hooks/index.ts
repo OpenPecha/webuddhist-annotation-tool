@@ -21,6 +21,7 @@ export {
   useSoftDeleteMyText,
   useUploadTextFile,
   useStartWork,
+  useAssignMe,
   useSkipText,
   useCancelWork,
   useRevertWork,
@@ -73,6 +74,7 @@ export {
   useUserStats as useUserStatsData,
   useUpdateCurrentUser,
   useUpdateUser,
+  useUpsertManualUser,
   useDeleteUser,
   useToggleUserStatus,
 } from "./useUsers";

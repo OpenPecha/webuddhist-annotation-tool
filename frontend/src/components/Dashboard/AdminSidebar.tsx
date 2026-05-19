@@ -1,4 +1,5 @@
 import React from "react";
+import { useSearchParams } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import {
   IoBarChart,
@@ -16,19 +17,42 @@ export type AdminTab =
   | "annotation-records"
   | "custom-annotations";
 
+export const ADMIN_VIEW_PARAM = "view";
+
+export const adminTabToViewParam: Record<AdminTab, string> = {
+  statistics: "statistics",
+  tasks: "document",
+  users: "users",
+  "annotation-records": "annotation-list",
+  "custom-annotations": "custom-annotations",
+};
+
+const viewParamToAdminTabMap = Object.fromEntries(
+  Object.entries(adminTabToViewParam).map(([tab, view]) => [view, tab])
+) as Record<string, AdminTab>;
+
+export function viewParamToAdminTab(view: string | null): AdminTab {
+  if (view && view in viewParamToAdminTabMap) {
+    return viewParamToAdminTabMap[view];
+  }
+  return "statistics";
+}
+
 interface AdminSidebarProps {
   sidebarOpen: boolean;
   setSidebarOpen: (open: boolean) => void;
-  activeAdminTab: AdminTab;
-  setActiveAdminTab: (tab: AdminTab) => void;
 }
 
 export const AdminSidebar: React.FC<AdminSidebarProps> = ({
   sidebarOpen,
   setSidebarOpen,
-  activeAdminTab,
-  setActiveAdminTab,
 }) => {
+  const [searchParams, setSearchParams] = useSearchParams();
+  const activeAdminTab = viewParamToAdminTab(searchParams.get(ADMIN_VIEW_PARAM));
+
+  const navigateToTab = (tab: AdminTab) => {
+    setSearchParams({ [ADMIN_VIEW_PARAM]: adminTabToViewParam[tab] }, { replace: true });
+  };
   const navBtn = (
     tab: typeof activeAdminTab,
     icon: React.ReactNode,
@@ -39,7 +63,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
     return (
       <button
         type="button"
-        onClick={() => setActiveAdminTab(tab)}
+        onClick={() => navigateToTab(tab)}
         title={sidebarOpen ? undefined : label}
         className={`group relative w-full rounded-xl border text-left transition-all duration-200 ${
           active
@@ -136,7 +160,7 @@ export const AdminSidebar: React.FC<AdminSidebarProps> = ({
             "tasks",
             <IoList className="h-4 w-4" />,
             "Documents",
-            "Browse tasks and export JSON"
+            "Upload texts and manage corpus"
           )}
           {navBtn(
             "users",

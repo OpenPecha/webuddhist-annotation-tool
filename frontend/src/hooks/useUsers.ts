@@ -1,7 +1,14 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { usersApi } from "@/api/users";
 import { queryKeys } from "@/constants/queryKeys";
-import type { UserResponse, UserUpdate, UserFilters, UserStats } from "@/api/types";
+import type {
+  AdminManualUserCreate,
+  ManualUserUpsertResponse,
+  UserResponse,
+  UserUpdate,
+  UserFilters,
+  UserStats,
+} from "@/api/types";
 
 // ============================================================================
 // Query Hooks
@@ -22,11 +29,15 @@ export const useCurrentUser = () => {
 /**
  * Get all users (admin only)
  */
-export const useUsers = (filters?: UserFilters) => {
+export const useUsers = (
+  filters?: UserFilters,
+  options?: { enabled?: boolean }
+) => {
   return useQuery<UserResponse[]>({
     queryKey: [...queryKeys.users.all, filters],
     queryFn: () => usersApi.getAllUsers(filters),
-    staleTime: 1000 * 60 * 5, // 5 minutes
+    staleTime: 1000 * 60 * 5,
+    enabled: options?.enabled ?? true,
   });
 };
 
@@ -84,6 +95,22 @@ export const useUpdateCurrentUser = () => {
 };
 
 /**
+ * Create or update staff user by email (admin only).
+ */
+export const useUpsertManualUser = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (userData: AdminManualUserCreate) =>
+      usersApi.upsertManualUser(userData),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.searchBase });
+    },
+  });
+};
+
+/**
  * Update user (admin only)
  */
 export const useUpdateUser = () => {
@@ -95,6 +122,7 @@ export const useUpdateUser = () => {
     onSuccess: (_, { userId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(userId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.searchBase });
     },
   });
 };
@@ -126,6 +154,7 @@ export const useToggleUserStatus = () => {
     onSuccess: (_, { userId }) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.users.detail(userId) });
       queryClient.invalidateQueries({ queryKey: queryKeys.users.all });
+      queryClient.invalidateQueries({ queryKey: queryKeys.users.searchBase });
     },
   });
 };

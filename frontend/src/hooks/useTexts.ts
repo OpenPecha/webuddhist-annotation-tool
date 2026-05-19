@@ -299,8 +299,8 @@ export const useUploadTextFile = (options?: UseUploadTextFileOptions) => {
       queryClient.invalidateQueries({ queryKey: queryKeys.texts.forAnnotation });
 
       if (showToast) {
-        toast.success("File uploaded successfully!", {
-          description: `"${data.title}" is ready for annotation`,
+        toast.success("Document uploaded", {
+          description: `"${data.title}" is in the corpus (unassigned until claimed).`,
         });
       }
 
@@ -319,7 +319,7 @@ export const useUploadTextFile = (options?: UseUploadTextFileOptions) => {
 };
 
 /**
- * Start work on a text (finds work in progress or assigns new text)
+ * Resume work in progress (does not claim a new document)
  */
 export const useStartWork = () => {
   const queryClient = useQueryClient();
@@ -330,6 +330,30 @@ export const useStartWork = () => {
       queryClient.invalidateQueries({ queryKey: queryKeys.texts.myWorkInProgress });
       queryClient.invalidateQueries({ queryKey: queryKeys.texts.forAnnotation });
       queryClient.invalidateQueries({ queryKey: queryKeys.texts.all });
+    },
+  });
+};
+
+/**
+ * Claim a new unassigned document (not an existing assignment)
+ */
+export const useAssignMe = () => {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => textApi.assignMe(),
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({ queryKey: queryKeys.texts.myWorkInProgress });
+      queryClient.invalidateQueries({ queryKey: queryKeys.texts.forAnnotation });
+      queryClient.invalidateQueries({ queryKey: queryKeys.texts.all });
+      toast.success("Document assigned", {
+        description: `You can work on: "${data.title}"`,
+      });
+    },
+    onError: (error: Error) => {
+      toast.error("Could not assign a document", {
+        description: error.message || "No unassigned documents are available.",
+      });
     },
   });
 };

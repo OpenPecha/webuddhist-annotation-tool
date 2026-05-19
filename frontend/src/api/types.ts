@@ -203,6 +203,18 @@ export interface UserCreate extends UserBase {
   is_active: boolean;
 }
 
+/** Admin manual add/upsert by email (POST /users/manual). */
+export interface AdminManualUserCreate {
+  email: string;
+  username: string;
+  full_name: string;
+  role: UserRole;
+}
+
+export interface ManualUserUpsertResponse extends UserResponse {
+  created: boolean;
+}
+
 /** Data for register/sync on login. auth0_user_id required; works without auth token. */
 export interface RegisterUserData {
   auth0_user_id: string;
@@ -238,6 +250,8 @@ export interface UserRoleResponse {
 export interface UserFilters extends PaginationParams {
   is_active?: boolean;
   role?: UserRole;
+  /** Omit users with this role from list results (e.g. exclude default "user" accounts). */
+  exclude_role?: UserRole;
   text_id?: number;
 }
 

@@ -1,7 +1,7 @@
 from typing import List, Optional
 from sqlalchemy.orm import Session
-from sqlalchemy import or_
-from models.user import User
+from sqlalchemy import func, or_
+from models.user import User, UserRole
 from schemas.user import UserCreate, UserUpdate
 
 
@@ -34,8 +34,60 @@ class UserCRUD:
         return db.query(User).filter(User.username == username).first()
 
     def get_by_email(self, db: Session, email: str) -> Optional[User]:
-        """Get user by email."""
-        return db.query(User).filter(User.email == email).first()
+        """Get user by email (case-insensitive)."""
+        if not email:
+            return None
+        normalized = email.strip().lower()
+        return (
+            db.query(User)
+            .filter(func.lower(User.email) == normalized)
+            .first()
+        )
+
+    def upsert_manual_by_email(
+        self,
+        db: Session,
+        *,
+        email: str,
+        username: str,
+        full_name: str,
+        role: UserRole,
+    ) -> tuple[User, bool]:
+        """
+        Create or update a user keyed by email.
+        On update: only role and is_active are changed (set active).
+        Returns (user, created).
+        """
+        normalized_email = email.strip().lower()
+        existing = self.get_by_email(db, normalized_email)
+
+        if existing:
+            updated = self.update(
+                db,
+                existing,
+                UserUpdate(role=role, is_active=True),
+            )
+            return updated, False
+
+        if self.is_username_taken(db, username):
+            raise ValueError("Username already taken")
+
+        auth0_user_id = f"manual|{normalized_email}"
+        if self.is_auth0_id_taken(db, auth0_user_id):
+            raise ValueError("A manual account for this email already exists")
+
+        created_user = self.create(
+            db,
+            UserCreate(
+                auth0_user_id=auth0_user_id,
+                username=username.strip(),
+                email=normalized_email,
+                full_name=full_name.strip(),
+                role=role,
+                is_active=True,
+            ),
+        )
+        return created_user, True
 
     def get_multi(
         self, 
@@ -43,7 +95,8 @@ class UserCRUD:
         skip: int = 0, 
         limit: int = 100,
         is_active: Optional[bool] = None,
-        role: Optional[str] = None
+        role: Optional[str] = None,
+        exclude_role: Optional[str] = None,
     ) -> List[User]:
         """Get multiple users with optional filtering."""
         query = db.query(User)
@@ -52,7 +105,16 @@ class UserCRUD:
             query = query.filter(User.is_active == is_active)
         
         if role:
-            query = query.filter(User.role == role)
+            role_enum = role if isinstance(role, UserRole) else UserRole(role)
+            query = query.filter(User.role == role_enum)
+
+        if exclude_role:
+            exclude_enum = (
+                exclude_role
+                if isinstance(exclude_role, UserRole)
+                else UserRole(exclude_role)
+            )
+            query = query.filter(User.role != exclude_enum)
         
         return query.offset(skip).limit(limit).all()
 

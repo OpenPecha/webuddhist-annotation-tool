@@ -119,7 +119,13 @@ const Index = () => {
     annotationLabelsInText.size === 0 ||
     [...annotationLabelsInText].every((l) => selectedAnnotationTypes.has(l));
 
-  const hasWritePermission = textData?.current_user_permission === "write";
+  const hasWritePermission =
+    textData?.current_user_permission === "write" ||
+    (currentUserId !== null &&
+      textData?.annotator_id === currentUserId &&
+      (textData.status === "progress" ||
+        textData.status === "annotated" ||
+        textData.status === "reviewed_needs_revision"));
   const forceReadOnlyFromNavigation = Boolean(
     (location.state as { forceReadOnly?: boolean } | null)?.forceReadOnly
   );
@@ -197,6 +203,24 @@ const Index = () => {
       addSelectedAnnotationTypes(types);
     }
   }, [location.state, addSelectedAnnotationTypes]);
+
+  /** Assigned annotators: enable all segment filters present in the document so editing is not blocked. */
+  useEffect(() => {
+    if (!textData || currentUserId === null) return;
+    if (textData.annotator_id !== currentUserId) return;
+    const labels = annotationsForUI
+      .map((ann) => getDisplayLabelForFilter(ann))
+      .filter((key): key is string => Boolean(key));
+    if (labels.length > 0) {
+      addSelectedAnnotationTypes([...new Set(labels)]);
+    }
+  }, [
+    textData?.id,
+    textData?.annotator_id,
+    currentUserId,
+    annotationsForUI,
+    addSelectedAnnotationTypes,
+  ]);
 
   /**
    * Effect: Check annotation acceptance status from recent activity

@@ -1,6 +1,10 @@
 import React, { useState, Suspense, useEffect, type ReactNode } from "react";
-import { AdminSidebar } from "./AdminSidebar";
-import type { AdminTab } from "./AdminSidebar";
+import { useSearchParams } from "react-router-dom";
+import {
+  AdminSidebar,
+  ADMIN_VIEW_PARAM,
+  viewParamToAdminTab,
+} from "./AdminSidebar";
 import { Loading } from "@/components/ui/loading";
 
 const AdminTaskSection = React.lazy(() =>
@@ -30,7 +34,8 @@ const AdminCustomAnnotationsSection = React.lazy(() =>
 );
 
 export const AdminDashboard: React.FC = () => {
-  const [activeAdminTab, setActiveAdminTab] = useState<AdminTab>("statistics");
+  const [searchParams] = useSearchParams();
+  const activeAdminTab = viewParamToAdminTab(searchParams.get(ADMIN_VIEW_PARAM));
   const [sidebarOpen, setSidebarOpen] = useState(true);
 
   useEffect(() => {
@@ -92,8 +97,6 @@ export const AdminDashboard: React.FC = () => {
       <AdminSidebar
         sidebarOpen={sidebarOpen}
         setSidebarOpen={setSidebarOpen}
-        activeAdminTab={activeAdminTab}
-        setActiveAdminTab={setActiveAdminTab}
       />
 
       <div

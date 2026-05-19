@@ -63,9 +63,9 @@ def read_texts(
 def create_text(
     text_in: TextCreate,
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_admin),
 ):
-    """Create new text. Only users and admins can create texts."""
+    """Create new text (admin only)."""
     return texts_controller.create_text(db, current_user, text_in)
 
 
@@ -75,9 +75,9 @@ def upload_text_file(
     file: UploadFile = File(...),
     annotation_type_id: Optional[str] = Form(None),
     db: Session = Depends(get_db),
-    current_user: User = Depends(get_current_active_user),
+    current_user: User = Depends(require_admin),
 ):
-    """Upload a text file and create a new text record. For TEI XML, annotation type is derived from the file."""
+    """Upload a text file (admin only). Document stays unassigned until an annotator claims it."""
     return texts_controller.upload_text_file(
         db, current_user, annotation_type_id, language, file
     )
@@ -110,8 +110,17 @@ def start_work(
     db: Session = Depends(get_db),
     current_user: User = Depends(get_current_active_user),
 ):
-    """Start work for current user - find work in progress or assign new text."""
+    """Resume work in progress (does not auto-assign a new document)."""
     return texts_controller.start_work(db, current_user)
+
+
+@router.post("/assign-me", response_model=TextResponse)
+def assign_me(
+    db: Session = Depends(get_db),
+    current_user: User = Depends(get_current_active_user),
+):
+    """Claim a new unassigned document (blocked if a task is already in progress)."""
+    return texts_controller.assign_me(db, current_user)
 
 
 @router.post("/skip-text", response_model=TextResponse)

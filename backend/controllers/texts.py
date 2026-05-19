@@ -72,11 +72,11 @@ def read_texts(
 
 
 def create_text(db: Session, current_user: User, text_in: TextCreate):
-    """Create new text. Only users and admins can create."""
-    if current_user.role.value not in ("user", "admin"):
+    """Create new text. Admin only; texts are not auto-assigned."""
+    if current_user.role.value != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Role '{current_user.role.value}' is not allowed to create texts",
+            detail="Only administrators can create texts",
         )
 
     existing_text = text_crud.get_by_title(db=db, title=text_in.title)
@@ -87,12 +87,7 @@ def create_text(db: Session, current_user: User, text_in: TextCreate):
         )
 
     text_in.uploaded_by = current_user.id
-    created_text = text_crud.create(db=db, obj_in=text_in)
-    if current_user.role.value == "user":
-        created_text = text_crud.assign_text_to_user(
-            db=db, text_id=created_text.id, user_id=current_user.id
-        )
-    return created_text
+    return text_crud.create(db=db, obj_in=text_in)
 
 
 def _is_tei_xml(filename: str, content: str) -> bool:
@@ -108,11 +103,11 @@ def _is_tei_xml(filename: str, content: str) -> bool:
 def upload_text_file(
     db: Session, current_user: User, annotation_type_id: Optional[str], language: str, file: UploadFile
 ):
-    """Upload a text file and create a new text record. Supports .txt and TEI XML (.xml)."""
-    if current_user.role.value not in ("user", "admin"):
+    """Upload a text file and create a new text record. Admin only; not auto-assigned."""
+    if current_user.role.value != "admin":
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
-            detail=f"Role '{current_user.role.value}' is not allowed to upload text files",
+            detail="Only administrators can upload text files",
         )
 
     is_xml = (
@@ -202,10 +197,6 @@ def upload_text_file(
 
     try:
         created_text = text_crud.create(db=db, obj_in=text_create)
-        if current_user.role.value == "user":
-            created_text = text_crud.assign_text_to_user(
-                db=db, text_id=created_text.id, user_id=current_user.id
-            )
         # Resolve selected annotation type name for editorial annotations (non-XML path already set above)
         if _is_tei_xml(filename, raw_content) and not selected_type_name and tei_editorial_annotations:
             selected_type_name = "tei_editorial"
@@ -231,7 +222,7 @@ def upload_text_file(
             items=pos_creates,
             annotator_id=None,
             text_id=created_text.id,
-            set_text_progress=True,
+            set_text_progress=False,
         )
         # Create editorial annotations (add, unclear, hi, decoration) with selected type in one commit.
         if tei_editorial_annotations and selected_type_name:
@@ -256,7 +247,7 @@ def upload_text_file(
                 items=editorial_creates,
                 annotator_id=None,
                 text_id=created_text.id,
-                set_text_progress=True,
+                set_text_progress=False,
             )
         # Attach annotation types for frontend filter selection (XML upload only)
         types_created: List[str] = []
@@ -289,35 +280,59 @@ def get_texts_for_annotation(
 
 
 def start_work(db: Session, current_user: User):
-    """Start work: find work in progress or assign new text."""
+    """Resume work in progress only (does not auto-assign new texts)."""
     text = text_crud.start_work(
         db=db, user_id=current_user.id, user_role=current_user.role.value
     )
     if not text:
-        if current_user.role.value == "user":
-            detail = "No texts available for annotation. Please upload a text file first."
-        elif current_user.role.value == "annotator":
-            detail = "No system texts available for annotation at this time. Contact your administrator."
+        if current_user.role.value == "annotator":
+            detail = (
+                "No task in progress. Use Assign me to claim an unassigned document."
+            )
         else:
-            detail = "No texts available for annotation at this time"
+            detail = "No work in progress."
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
     return text
 
 
-def skip_text(db: Session, current_user: User):
-    """Skip current text and get next available."""
-    next_text = text_crud.skip_text(
+def assign_me(db: Session, current_user: User):
+    """Claim a new unassigned document for the current annotator."""
+    if current_user.role.value not in ("annotator", "admin", "reviewer"):
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail=f"Role '{current_user.role.value}' cannot claim annotation tasks",
+        )
+
+
+    text = text_crud.assign_me(
         db=db, user_id=current_user.id, user_role=current_user.role.value
     )
-    if not next_text:
-        if current_user.role.value == "user":
-            detail = "No more texts available for annotation. Please upload more text files."
-        elif current_user.role.value == "annotator":
-            detail = "No more system texts available for annotation at this time. Contact your administrator."
-        else:
-            detail = "No more texts available for annotation at this time"
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=detail)
-    return next_text
+    if not text:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No unassigned documents available at this time.",
+        )
+    return text
+
+
+def skip_text(db: Session, current_user: User):
+    """Skip current text and release it for other annotators."""
+    current = text_crud.get_work_in_progress(
+        db=db, user_id=current_user.id, user_role=current_user.role.value
+    )
+    if not current:
+        raise HTTPException(
+            status_code=status.HTTP_404_NOT_FOUND,
+            detail="No text in progress to skip.",
+        )
+
+    text_crud.skip_text(
+        db=db, user_id=current_user.id, user_role=current_user.role.value
+    )
+    raise HTTPException(
+        status_code=status.HTTP_404_NOT_FOUND,
+        detail="Text skipped. Use Assign me on the dashboard to claim another document.",
+    )
 
 
 def get_my_rejected_texts(db: Session, current_user: User) -> List[RejectedTextWithDetails]:

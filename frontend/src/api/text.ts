@@ -102,9 +102,14 @@ export const textApi = {
     return apiClient.get<TextResponse[]>("/texts/for-annotation", filters);
   },
 
-  // Start work - find work in progress or assign new text
+  // Resume work in progress only
   startWork: async (): Promise<TextResponse> => {
     return apiClient.post<TextResponse>("/texts/start-work");
+  },
+
+  // Claim a new unassigned document
+  assignMe: async (): Promise<TextResponse> => {
+    return apiClient.post<TextResponse>("/texts/assign-me");
   },
 
   // Skip current text and get next available text

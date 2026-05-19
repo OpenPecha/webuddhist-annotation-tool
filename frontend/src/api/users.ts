@@ -1,5 +1,7 @@
 import { apiClient } from "./utils";
 import type {
+  AdminManualUserCreate,
+  ManualUserUpsertResponse,
   UserResponse,
   UserUpdate,
   UserFilters,
@@ -33,6 +35,13 @@ export const usersApi = {
   // Update current user info
   updateCurrentUser: async (userData: UserUpdate): Promise<UserResponse> => {
     return apiClient.put<UserResponse>("/users/me", userData);
+  },
+
+  /** Create or update staff user by email (admin only). */
+  upsertManualUser: async (
+    userData: AdminManualUserCreate
+  ): Promise<ManualUserUpsertResponse> => {
+    return apiClient.post<ManualUserUpsertResponse>("/users/manual", userData);
   },
 
   // Get all users (admin only)

@@ -4,12 +4,10 @@ import { useNavigate } from "react-router-dom";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { AiOutlineLoading3Quarters } from "react-icons/ai";
-import BulkUploadModal from "../BulkUploadModal";
-import type { BulkUploadResponse } from "@/api/bulk-upload";
-import { LoadTextModal } from "./LoadTextModal";
 import { useAuth0 } from "@auth0/auth0-react";
 import {
   useStartWork,
+  useAssignMe,
   useMyWorkInProgress,
   usePermission,
   useSharedTexts,
@@ -18,7 +16,7 @@ import {
 import { ListTodo } from "lucide-react";
 import { IoChevronBack, IoChevronForward } from "react-icons/io5";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
-import type { TextResponse } from "@/api/types";
+import { TextStatus, type TextResponse } from "@/api/types";
 
 const formatDate = (dateString: string) => {
   return new Date(dateString).toLocaleDateString("en-US", {
@@ -59,9 +57,8 @@ export const RegularUserDashboard: React.FC = () => {
   const navigate = useNavigate();
   const { user } = useAuth0();
   const { role } = usePermission();
-  const [showBulkUploadModal, setShowBulkUploadModal] = useState(false);
-  const [showLoadTextModal, setShowLoadTextModal] = useState(false);
   const [isLoadingText, setIsLoadingText] = useState(false);
+  const [isAssigning, setIsAssigning] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [activeTab, setActiveTab] = useState<"my-work" | "shared" | "all-tasks">("my-work");
   const [myWorkPage, setMyWorkPage] = useState(1);
@@ -69,6 +66,9 @@ export const RegularUserDashboard: React.FC = () => {
   const [allTasksPage, setAllTasksPage] = useState(1);
 
   const startWorkMutation = useStartWork();
+  const assignMeMutation = useAssignMe();
+  const canClaimTasks =
+    role === "annotator" || role === "reviewer" || role === "admin";
   const ITEMS_PER_PAGE = 10;
   const myWorkSkip = (myWorkPage - 1) * ITEMS_PER_PAGE;
   const sharedSkip = (sharedPage - 1) * ITEMS_PER_PAGE;
@@ -127,9 +127,10 @@ export const RegularUserDashboard: React.FC = () => {
           errorMessage = apiError.detail || "Failed to start work";
 
           if (apiError.status_code === 404) {
-            errorTitle = "📝 No Tasks Available";
-            errorMessage =
-              "No texts available for annotation at this time. Please contact your administrator to add more texts to the system.";
+            errorTitle = "📝 No work in progress";
+            errorMessage = canClaimTasks
+              ? "Use Assign me to claim an unassigned document."
+              : "No task is currently assigned to you.";
           }
         }
 
@@ -148,16 +149,26 @@ export const RegularUserDashboard: React.FC = () => {
     });
   };
 
-  const handleBulkUploadComplete = (result: BulkUploadResponse) => {
-    if (result.success) {
-      toast.success("Bulk upload completed successfully!", {
-        description: `${result.summary.total_texts_created} texts and ${result.summary.total_annotations_created} annotations created`,
-      });
-    }
-    setShowBulkUploadModal(false);
+  const handleAssignMe = () => {
+    setIsAssigning(true);
+    assignMeMutation.mutate(undefined, {
+      onSuccess: (text) => {
+        navigate(`/task/${text.id}`);
+        setIsAssigning(false);
+      },
+      onError: () => {
+        setIsAssigning(false);
+      },
+    });
   };
 
+  const hasTaskInProgress = workInProgress.some(
+    (text) => text.status === TextStatus.ANNOTATION_IN_PROGRESS
+  );
+
   const startBusy = isLoadingText || startWorkMutation.isPending;
+  const assignBusy = isAssigning || assignMeMutation.isPending;
+  const canAssignNewTask = canClaimTasks  && !isLoadingWorkInProgress;
 
   return (
     <div className="flex-1 bg-background flex">
@@ -205,30 +216,32 @@ export const RegularUserDashboard: React.FC = () => {
             ) : (
               <StartWorkIcon />
             )}
-            <span className="ml-2">{startBusy ? "Starting…" : "Start Work"}</span>
+            <span className="ml-2">
+              {startBusy ? "Opening…" : "Continue work"}
+            </span>
           </Button>
 
-          {role !== "user" && (
+          {canClaimTasks && (
             <Button
               size="lg"
               variant="outline"
               className="w-full h-12 text-base font-medium"
-              onClick={() => setShowLoadTextModal(true)}
+              onClick={handleAssignMe}
+              disabled={assignBusy || !canAssignNewTask}
+              title={
+                hasTaskInProgress
+                  ? "Finish or continue your current task before claiming another"
+                  : undefined
+              }
             >
-              <svg
-                className="w-5 h-5"
-                fill="none"
-                stroke="currentColor"
-                viewBox="0 0 24 24"
-              >
-                <path
-                  strokeLinecap="round"
-                  strokeLinejoin="round"
-                  strokeWidth={2}
-                  d="M7 16a4 4 0 01-.88-7.903A5 5 0 1115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"
-                />
-              </svg>
-              <span className="ml-2">Load Text</span>
+              {assignBusy ? (
+                <AiOutlineLoading3Quarters className="w-5 h-5 animate-spin" />
+              ) : (
+                <StartWorkIcon />
+              )}
+              <span className="ml-2">
+                {assignBusy ? "Assigning…" : "Assign me"}
+              </span>
             </Button>
           )}
         </div>
@@ -272,7 +285,9 @@ export const RegularUserDashboard: React.FC = () => {
                   </h2>
                 </div>
                 <p className="text-sm text-muted-foreground">
-                  Tasks you can write on
+                  {canClaimTasks
+                    ? "Documents assigned to you"
+                    : "Tasks you can write on"}
                 </p>
               </div>
               {isLoadingWorkInProgress && (
@@ -345,13 +360,21 @@ export const RegularUserDashboard: React.FC = () => {
                 <div className="text-center py-6 border border-dashed border-border rounded-lg bg-muted/30">
                   <p className="text-muted-foreground">No writable tasks found.</p>
                   <p className="text-sm text-muted-foreground mt-1">
-                    Use <strong>Start Work</strong> in the sidebar to pick a text
-                    {role === "user" ? (
-                      <>
-                        , or <strong>Load Text</strong> to upload your own.
-                      </>
+                    {canClaimTasks ? (
+                      hasTaskInProgress ? (
+                        <>
+                          Use <strong>Continue work</strong> for your current
+                          task. Submit or skip it before using{" "}
+                          <strong>Assign me</strong> again.
+                        </>
+                      ) : (
+                        <>
+                          Use <strong>Assign me</strong> to claim an unassigned
+                          document.
+                        </>
+                      )
                     ) : (
-                      "."
+                      "No tasks are assigned to you yet."
                     )}
                   </p>
                 </div>
@@ -450,16 +473,6 @@ export const RegularUserDashboard: React.FC = () => {
         </div>
       </div>
 
-      <BulkUploadModal
-        isOpen={showBulkUploadModal}
-        onClose={() => setShowBulkUploadModal(false)}
-        onUploadComplete={handleBulkUploadComplete}
-      />
-
-      <LoadTextModal
-        isOpen={showLoadTextModal}
-        onClose={() => setShowLoadTextModal(false)}
-      />
     </div>
   );
 };

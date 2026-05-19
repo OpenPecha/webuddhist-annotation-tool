@@ -8,7 +8,14 @@ from sqlalchemy.orm import Session
 from deps import get_db
 from auth import get_current_active_user, require_admin
 from models.user import User, UserRole
-from schemas.user import UserCreate, UserUpdate, UserResponse, UserRoleResponse
+from schemas.user import (
+    AdminManualUserCreate,
+    ManualUserUpsertResponse,
+    UserCreate,
+    UserUpdate,
+    UserResponse,
+    UserRoleResponse,
+)
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 
 from controllers import users as users_controller
@@ -71,18 +78,35 @@ def debug_auth0_integration(
     return users_controller.debug_auth0_integration(credentials.credentials)
 
 
+@router.post("/manual", response_model=ManualUserUpsertResponse)
+def upsert_manual_user(
+    user_in: AdminManualUserCreate,
+    db: Session = Depends(get_db),
+    current_user: User = Depends(require_admin),
+):
+    """Create staff user or update role/status by email (admin only)."""
+    return users_controller.upsert_manual_user(db, current_user, user_in)
+
+
 @router.get("/", response_model=List[UserResponse])
 def read_users(
     skip: int = Query(0, ge=0),
     limit: int = Query(100, ge=1, le=1000),
     is_active: Optional[bool] = Query(None),
     role: Optional[UserRole] = Query(None),
+    exclude_role: Optional[UserRole] = Query(None),
     db: Session = Depends(get_db),
     current_user: User = Depends(require_admin),
 ):
     """Get users list (Admin only)."""
     return users_controller.list_users(
-        db, current_user, skip=skip, limit=limit, is_active=is_active, role=role
+        db,
+        current_user,
+        skip=skip,
+        limit=limit,
+        is_active=is_active,
+        role=role,
+        exclude_role=exclude_role,
     )
 
 
