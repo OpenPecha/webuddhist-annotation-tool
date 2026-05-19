@@ -27,11 +27,15 @@ import { useAnnotationFiltersStore } from "@/store/annotationFilters";
 /**
  * Get all texts with optional filtering
  */
-export const useTexts = (filters?: TextFilters) => {
+export const useTexts = (
+  filters?: TextFilters,
+  options?: { enabled?: boolean }
+) => {
   return useQuery({
     queryKey: [...queryKeys.texts.all, filters],
     queryFn: () => textApi.getTexts(filters),
     staleTime: 1000 * 60 * 5, // 5 minutes
+    enabled: options?.enabled ?? true,
   });
 };
 

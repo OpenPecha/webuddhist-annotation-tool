@@ -40,7 +40,7 @@ export function UsersFilters({
         />
         <input
           type="search"
-          placeholder="Search staff by username or email…"
+          placeholder="Search by username, email, or name…"
           value={searchQuery}
           onChange={(e) => onSearchChange(e.target.value)}
           className={cn(

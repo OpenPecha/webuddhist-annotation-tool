@@ -42,12 +42,25 @@ interface AnnotationTypesFilterProps {
   onSetSelectedAnnotationTypes?: (filterKeys: Set<string>) => void;
 }
 
+const getSectionSelectionState = (
+  rows: FilterRow[] | undefined,
+  selectedAnnotationTypes: Set<string>
+) => {
+  if (!rows?.length) {
+    return { enabledKeys: [] as string[], someSelected: false };
+  }
+  const enabledKeys = rows.filter((r) => !r.disabled).map((r) => r.key);
+  const someSelected = enabledKeys.some((k) => selectedAnnotationTypes.has(k));
+  return { enabledKeys, someSelected };
+};
+
 export const AnnotationTypesFilter = (props: AnnotationTypesFilterProps) => {
   const {
     annotations,
     loading = false,
     selectedAnnotationTypes,
     onToggleAnnotationType,
+    onSetSelectedAnnotationTypes,
   } = props;
   const { annotationTypeColors } = useAnnotationColors();
   const {
@@ -246,6 +259,19 @@ export const AnnotationTypesFilter = (props: AnnotationTypesFilterProps) => {
     selectedAnnotationTypes,
   ]);
 
+  const clearSectionAnnotationTypes = (typeName: string) => {
+    const rows = rowsByTypeName.get(typeName);
+    const { enabledKeys, someSelected } = getSectionSelectionState(
+      rows,
+      selectedAnnotationTypes
+    );
+    if (!someSelected || !onSetSelectedAnnotationTypes) return;
+
+    const next = new Set(selectedAnnotationTypes);
+    enabledKeys.forEach((key) => next.delete(key));
+    onSetSelectedAnnotationTypes(next);
+  };
+
   const swatchForType = (name: string, dbRecord: AnnotationType | null) =>
     dbRecord?.color?.trim() ||
     annotationTypeColors[name] ||
@@ -325,6 +351,10 @@ export const AnnotationTypesFilter = (props: AnnotationTypesFilterProps) => {
                   showOnlyUsedInText && rows
                     ? rows.filter((r) => r.count > 0)
                     : rows;
+                const { someSelected } = getSectionSelectionState(
+                  rows,
+                  selectedAnnotationTypes
+                );
                 return (
                   <div
                     key={typeName}
@@ -360,6 +390,19 @@ export const AnnotationTypesFilter = (props: AnnotationTypesFilterProps) => {
                           {instancesInText > 0 ? instancesInText : "—"}
                         </span>
                       </div>
+                      {someSelected && onSetSelectedAnnotationTypes && (
+                        <button
+                          type="button"
+                          onClick={(e) => {
+                            e.stopPropagation();
+                            clearSectionAnnotationTypes(typeName);
+                          }}
+                          className="mr-1.5 shrink-0 rounded px-1.5 py-0.5 text-[10px] font-medium normal-case text-orange-700 hover:bg-orange-50 border border-orange-200/80"
+                          title={`Clear all selected ${typeName} subcategories`}
+                        >
+                          Clear all
+                        </button>
+                      )}
                     </div>
                     {isExpanded && (
                       <div className="bg-white space-y-0.5 p-1">

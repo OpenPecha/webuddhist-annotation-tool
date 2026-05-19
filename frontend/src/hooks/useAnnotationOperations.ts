@@ -39,11 +39,7 @@ export const useAnnotationOperations = (
   annotationList: any // TODO: Type this properly
 ) => {
   const { toast } = useToast();
-  const {
-    selectedAnnotationTypes,
-    setSelectedAnnotationTypes,
-    selectedAnnotationListType,
-  } = useAnnotationFiltersStore();
+  const { selectedAnnotationListType } = useAnnotationFiltersStore();
   const { getCustomOptions } = useCustomAnnotationsStore();
   const queryClient = useQueryClient();
   const { data: annotationTypes = [] } = useAnnotationTypes();
@@ -95,17 +91,6 @@ export const useAnnotationOperations = (
     },
     [annotationList, selectedAnnotationListType, getCustomOptions, annotationTypes]
   );
-
-  /**
-   * Automatically checks annotation type in filter
-   */
-  const autoCheckAnnotationType = useCallback((annotationType: string) => {
-    if (annotationType && !selectedAnnotationTypes.has(annotationType)) {
-      const newSelectedTypes = new Set(selectedAnnotationTypes);
-      newSelectedTypes.add(annotationType);
-      setSelectedAnnotationTypes(newSelectedTypes);
-    }
-  }, [selectedAnnotationTypes, setSelectedAnnotationTypes]);
 
   /**
    * Adds a new annotation with optimistic update
@@ -199,9 +184,6 @@ export const useAnnotationOperations = (
           });
         }
 
-        const filterKey = getDisplayLabelForFilter(data);
-        if (filterKey) autoCheckAnnotationType(filterKey);
-
         toast({
           title: TOAST_MESSAGES.ANNOTATION_CREATED,
           description: `${data.annotation_type} annotation saved to database`,
@@ -221,7 +203,7 @@ export const useAnnotationOperations = (
         queryClient.invalidateQueries({ queryKey: cacheKey });
       },
     });
-  }, [textId, validateAnnotationType, currentUserId, toast, createAnnotationMutation, autoCheckAnnotationType, queryClient]);
+  }, [textId, validateAnnotationType, currentUserId, toast, createAnnotationMutation, queryClient]);
 
   /**
    * Find all non-overlapping occurrences of search in text.
@@ -303,8 +285,6 @@ export const useAnnotationOperations = (
         })),
       });
       await queryClient.refetchQueries({ queryKey: cacheKey });
-      const filterKey = getDisplayLabelForFilter(annotation);
-      if (filterKey) autoCheckAnnotationType(filterKey);
       toast({
         title: TOAST_MESSAGES.ANNOTATION_CREATED,
         description: `Applied to ${toCreate.length} occurrence(s).`,
@@ -318,7 +298,7 @@ export const useAnnotationOperations = (
     } finally {
       setBulkOperationPending(false);
     }
-  }, [textId, text, validateAnnotationType, toast, queryClient, findAllOccurrences, autoCheckAnnotationType]);
+  }, [textId, text, validateAnnotationType, toast, queryClient, findAllOccurrences]);
 
   /**
    * Update annotation in place via PUT (label, name, level).
@@ -397,8 +377,6 @@ export const useAnnotationOperations = (
               ),
             });
           }
-          const displayLabel = getDisplayLabelForFilter(data);
-          if (displayLabel) autoCheckAnnotationType(displayLabel);
           toast({
             title: TOAST_MESSAGES.ANNOTATION_UPDATED,
             description: "Annotation updated successfully",
@@ -418,7 +396,7 @@ export const useAnnotationOperations = (
         },
       }
     );
-  }, [textId, toast, updateAnnotationMutation, autoCheckAnnotationType, queryClient]);
+  }, [textId, toast, updateAnnotationMutation, queryClient]);
 
   /**
    * Removes an annotation
@@ -635,9 +613,6 @@ export const useAnnotationOperations = (
           });
         }
 
-        const filterKey = getDisplayLabelForFilter(data);
-        if (filterKey) autoCheckAnnotationType(filterKey);
-
         toast({
           title: TOAST_MESSAGES.ANNOTATION_CREATED,
           description: `${data.annotation_type} annotation saved to database`,
@@ -657,7 +632,7 @@ export const useAnnotationOperations = (
       },
     });
     setPendingHeader(null);
-  }, [pendingHeader, textId, currentUserId, queryClient, toast, createAnnotationMutation, autoCheckAnnotationType]);
+  }, [pendingHeader, textId, currentUserId, queryClient, toast, createAnnotationMutation]);
 
   /**
    * Cancels header creation

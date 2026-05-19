@@ -24,6 +24,22 @@ const escapeCsvValue = (value: string) => {
   return `"${escaped}"`;
 };
 
+const formatCreatorName = (item: {
+  first_created_by_full_name?: string;
+  first_created_by_username?: string;
+  user_count: number;
+}) => {
+  const name =
+    item.first_created_by_full_name?.trim() ||
+    item.first_created_by_username?.trim() ||
+    "";
+  if (!name) return "—";
+  if (item.user_count > 1) {
+    return `${name} (+${item.user_count - 1} other${item.user_count === 2 ? "" : "s"})`;
+  }
+  return name;
+};
+
 export const AdminCustomAnnotationsSection: React.FC = () => {
   const [searchInput, setSearchInput] = useState("");
   const [typeFilter, setTypeFilter] = useState("all");
@@ -64,6 +80,10 @@ export const AdminCustomAnnotationsSection: React.FC = () => {
     const header = [
       "label",
       "annotation_type",
+      "first_created_by_user_id",
+      "first_created_by_username",
+      "first_created_by_full_name",
+      "creator_usernames",
       "usage_count",
       "user_count",
       "text_count",
@@ -74,6 +94,12 @@ export const AdminCustomAnnotationsSection: React.FC = () => {
     const rows = filteredRows.map((item) => [
       item.label,
       item.annotation_type_name || "",
+      item.first_created_by_user_id != null
+        ? String(item.first_created_by_user_id)
+        : "",
+      item.first_created_by_username || "",
+      item.first_created_by_full_name || "",
+      item.creator_usernames || "",
       String(item.usage_count),
       String(item.user_count),
       String(item.text_count),
@@ -146,6 +172,18 @@ export const AdminCustomAnnotationsSection: React.FC = () => {
                 scope="col"
                 className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
               >
+                First Created By
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
+              >
+                All Creators
+              </th>
+              <th
+                scope="col"
+                className="px-4 py-3 text-left text-xs font-semibold uppercase tracking-wide text-gray-600"
+              >
                 Used
               </th>
               <th
@@ -185,6 +223,12 @@ export const AdminCustomAnnotationsSection: React.FC = () => {
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-700">
                   {item.annotation_type_name || "-"}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-700">
+                  {formatCreatorName(item)}
+                </td>
+                <td className="px-4 py-3 text-sm text-gray-700">
+                  {item.creator_usernames || "—"}
                 </td>
                 <td className="px-4 py-3 text-sm text-gray-700">
                   {item.usage_count}

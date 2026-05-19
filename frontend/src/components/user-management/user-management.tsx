@@ -69,7 +69,8 @@ export function UserManagement({ className }: UserManagementProps) {
             </h2>
           </div>
           <p className="text-sm text-muted-foreground">
-            Only admin, reviewer, and annotator accounts are shown.
+            Admin, reviewer, and annotator accounts are listed by default.
+            Search to find any user, including regular accounts.
           </p>
         </div>
         <Button type="button" onClick={() => setIsAddUserOpen(true)}>

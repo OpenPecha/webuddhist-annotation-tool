@@ -104,21 +104,6 @@ const Index = () => {
     return textData?.annotations ? convertApiAnnotationsSync(textData.annotations) : [];
   }, [textData]);
 
-  /** All annotation filter keys (type|label) that appear in this text (for "all segments selected" check) */
-  const annotationLabelsInText = useMemo(() => {
-    const keys = new Set<string>();
-    annotationsForUI.forEach((ann) => {
-      const key = getDisplayLabelForFilter(ann);
-      if (key) keys.add(key);
-    });
-    return keys;
-  }, [annotationsForUI]);
-
-  /** Editable only when every segment type present in the text is selected in the filter */
-  const allSegmentsSelected =
-    annotationLabelsInText.size === 0 ||
-    [...annotationLabelsInText].every((l) => selectedAnnotationTypes.has(l));
-
   const hasWritePermission =
     textData?.current_user_permission === "write" ||
     (currentUserId !== null &&
@@ -134,8 +119,7 @@ const Index = () => {
     forceReadOnlyFromNavigation ||
     !hasWritePermission ||
     allAnnotationsAccepted ||
-    !textData ||
-    !allSegmentsSelected;
+    !textData;
 
   /**
    * Custom hook: Annotation CRUD operations
@@ -203,24 +187,6 @@ const Index = () => {
       addSelectedAnnotationTypes(types);
     }
   }, [location.state, addSelectedAnnotationTypes]);
-
-  /** Assigned annotators: enable all segment filters present in the document so editing is not blocked. */
-  useEffect(() => {
-    if (!textData || currentUserId === null) return;
-    if (textData.annotator_id !== currentUserId) return;
-    const labels = annotationsForUI
-      .map((ann) => getDisplayLabelForFilter(ann))
-      .filter((key): key is string => Boolean(key));
-    if (labels.length > 0) {
-      addSelectedAnnotationTypes([...new Set(labels)]);
-    }
-  }, [
-    textData?.id,
-    textData?.annotator_id,
-    currentUserId,
-    annotationsForUI,
-    addSelectedAnnotationTypes,
-  ]);
 
   /**
    * Effect: Check annotation acceptance status from recent activity

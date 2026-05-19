@@ -288,8 +288,9 @@ export const BubbleMenu: React.FC<BubbleMenuProps> = ({
     effectiveModeForCursor === "table-of-contents"
       ? selectedStructuralType !== null
       : selectedBubbleAnnotationType !== null && selectedErrorCategory !== null;
-      const disableOtherOptionsFrom=['animacy', 'pos', 'semantic roles feature']
-      const disableOtherOptions = !disableOtherOptionsFrom.includes(selectedBubbleAnnotationType?.name.toLowerCase() || '')  ;
+      const disableOtherOptionsFrom=['animacy', 'pos', 'semantic roles  features']
+      const disableOtherOptions = !disableOtherOptionsFrom.includes(selectedBubbleAnnotationType?.name.toLowerCase() || '');
+      console.log(selectedBubbleAnnotationType?.name.toLowerCase())
   const modalContent = (
     <div
       className="fixed bg-white border border-gray-200 rounded-lg shadow-xl p-4 z-50 w-[380px] max-w-[90vw] overflow-hidden"

@@ -82,19 +82,19 @@ export const RegularUserDashboard: React.FC = () => {
     skip: sharedSkip,
     limit: ITEMS_PER_PAGE,
   });
-  const { data: paginatedTexts = [], isLoading: isLoadingTexts } = useTexts({
-    skip: allTasksSkip,
-    limit: ITEMS_PER_PAGE,
-  });
+  const { data: paginatedTexts = [], isLoading: isLoadingTexts } = useTexts(
+    {
+      skip: allTasksSkip,
+      limit: ITEMS_PER_PAGE,
+    },
+    { enabled: activeTab === "all-tasks" }
+  );
   const hasPreviousMyWorkPage = myWorkPage > 1;
   const hasNextMyWorkPage = workInProgress.length === ITEMS_PER_PAGE;
   const hasPreviousSharedPage = sharedPage > 1;
   const hasNextSharedPage = sharedTexts.length === ITEMS_PER_PAGE;
   const hasPreviousAllTasksPage = allTasksPage > 1;
   const hasNextAllTasksPage = paginatedTexts.length === ITEMS_PER_PAGE;
-  const canViewAllTasksTab =
-    role === "annotator" || role === "reviewer" || role === "admin";
-
   const openSharedText = (text: TextResponse) => {
     if (text.current_user_permission === "write") {
       navigate(`/task/${text.id}`);
@@ -246,10 +246,9 @@ export const RegularUserDashboard: React.FC = () => {
           )}
         </div>
       </div>
-
       <div className="flex-1 overflow-auto md:ml-0 ml-0">
         <div className="p-4 md:p-8 pt-20 md:pt-8">
-          {user && (
+          {user && (role == "reviewer" || role == "admin") && (
             <div className="mb-6">
               <div className="inline-flex rounded-lg border border-border bg-card p-1">
                 <Button
@@ -261,16 +260,14 @@ export const RegularUserDashboard: React.FC = () => {
                   My Work
                 </Button>
             
-                {canViewAllTasksTab && (
-                  <Button
-                    variant={activeTab === "all-tasks" ? "default" : "ghost"}
-                    size="sm"
-                    onClick={() => setActiveTab("all-tasks")}
-                    className="rounded-md"
-                  >
-                    All Tasks
-                  </Button>
-                )}
+                <Button
+                  variant={activeTab === "all-tasks" ? "default" : "ghost"}
+                  size="sm"
+                  onClick={() => setActiveTab("all-tasks")}
+                  className="rounded-md"
+                >
+                  All Tasks
+                </Button>
               </div>
             </div>
           )}
@@ -384,7 +381,7 @@ export const RegularUserDashboard: React.FC = () => {
 
       
 
-          {user && canViewAllTasksTab && activeTab === "all-tasks" && (
+          {user && activeTab === "all-tasks" && (
             <div className="mb-8">
               <div className="mb-4">
                 <h2 className="font-display text-lg font-semibold text-foreground">
@@ -428,13 +425,9 @@ export const RegularUserDashboard: React.FC = () => {
                       <Button
                         size="sm"
                         className="ml-4 shrink-0"
-                        onClick={() =>
-                          navigate(`/task/${text.id}`, {
-                            state: { forceReadOnly: true },
-                          })
-                        }
+                        onClick={() => navigate(`/task/${text.id}`)}
                       >
-                        View
+                        Open & Edit
                       </Button>
                     </div>
                   ))}

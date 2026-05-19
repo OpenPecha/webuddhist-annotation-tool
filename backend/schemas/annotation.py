@@ -147,3 +147,7 @@ class CustomAnnotationListResponse(BaseModel):
     text_count: int
     first_seen_at: datetime
     last_seen_at: datetime
+    first_created_by_user_id: Optional[int] = None
+    first_created_by_username: Optional[str] = None
+    first_created_by_full_name: Optional[str] = None
+    creator_usernames: str = ""

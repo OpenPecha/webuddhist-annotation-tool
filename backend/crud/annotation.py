@@ -6,6 +6,7 @@ from models.text import Text, INITIALIZED, ANNOTATED, PROGRESS
 from models.annotation_review import AnnotationReview
 from models.annotation_list import AnnotationList
 from models.annotation_type import AnnotationType
+from models.user import User
 from schemas.annotation import AnnotationCreate, AnnotationUpdate
 
 
@@ -402,6 +403,45 @@ class AnnotationCRUD:
         normalized_label = func.lower(func.trim(Annotation.label))
         normalized_title = func.lower(func.trim(AnnotationList.title))
 
+        custom_label_filters = (
+            Annotation.annotator_id.isnot(None),
+            Text.annotation_type_id.isnot(None),
+            Annotation.label.isnot(None),
+            func.trim(Annotation.label) != "",
+            AnnotationList.id.is_(None),
+        )
+
+        ranked_creators = (
+            db.query(
+                normalized_label.label("norm_label"),
+                Text.annotation_type_id.label("annotation_type_id"),
+                Annotation.annotator_id.label("first_created_by_user_id"),
+                User.username.label("first_created_by_username"),
+                User.full_name.label("first_created_by_full_name"),
+                func.row_number()
+                .over(
+                    partition_by=[normalized_label, Text.annotation_type_id],
+                    order_by=Annotation.created_at.asc(),
+                )
+                .label("rn"),
+            )
+            .join(Text, Text.id == Annotation.text_id)
+            .join(User, User.id == Annotation.annotator_id)
+            .outerjoin(AnnotationType, AnnotationType.id == Text.annotation_type_id)
+            .outerjoin(
+                AnnotationList,
+                and_(
+                    AnnotationList.type_id == Text.annotation_type_id,
+                    normalized_title == normalized_label,
+                ),
+            )
+            .filter(*custom_label_filters)
+        ).subquery()
+
+        first_creators = (
+            db.query(ranked_creators).filter(ranked_creators.c.rn == 1).subquery()
+        )
+
         rows = (
             db.query(
                 func.min(Annotation.label).label("label"),
@@ -412,8 +452,15 @@ class AnnotationCRUD:
                 func.count(func.distinct(Annotation.text_id)).label("text_count"),
                 func.min(Annotation.created_at).label("first_seen_at"),
                 func.max(Annotation.created_at).label("last_seen_at"),
+                first_creators.c.first_created_by_user_id,
+                first_creators.c.first_created_by_username,
+                first_creators.c.first_created_by_full_name,
+                func.string_agg(func.distinct(User.username), ", ").label(
+                    "creator_usernames"
+                ),
             )
             .join(Text, Text.id == Annotation.text_id)
+            .join(User, User.id == Annotation.annotator_id)
             .outerjoin(AnnotationType, AnnotationType.id == Text.annotation_type_id)
             .outerjoin(
                 AnnotationList,
@@ -422,15 +469,21 @@ class AnnotationCRUD:
                     normalized_title == normalized_label,
                 ),
             )
-            .filter(Annotation.annotator_id.isnot(None))
-            .filter(Text.annotation_type_id.isnot(None))
-            .filter(Annotation.label.isnot(None))
-            .filter(func.trim(Annotation.label) != "")
-            .filter(AnnotationList.id.is_(None))
+            .outerjoin(
+                first_creators,
+                and_(
+                    first_creators.c.norm_label == normalized_label,
+                    first_creators.c.annotation_type_id == Text.annotation_type_id,
+                ),
+            )
+            .filter(*custom_label_filters)
             .group_by(
                 normalized_label,
                 Text.annotation_type_id,
                 AnnotationType.name,
+                first_creators.c.first_created_by_user_id,
+                first_creators.c.first_created_by_username,
+                first_creators.c.first_created_by_full_name,
             )
             .order_by(func.max(Annotation.created_at).desc())
             .all()
@@ -446,6 +499,10 @@ class AnnotationCRUD:
                 "text_count": int(row.text_count or 0),
                 "first_seen_at": row.first_seen_at,
                 "last_seen_at": row.last_seen_at,
+                "first_created_by_user_id": row.first_created_by_user_id,
+                "first_created_by_username": row.first_created_by_username,
+                "first_created_by_full_name": row.first_created_by_full_name,
+                "creator_usernames": row.creator_usernames or "",
             }
             for row in rows
             if row.label

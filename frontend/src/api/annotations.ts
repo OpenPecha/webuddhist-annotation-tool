@@ -23,6 +23,10 @@ export interface CustomAnnotationLabelResponse {
   text_count: number;
   first_seen_at: string;
   last_seen_at: string;
+  first_created_by_user_id?: number;
+  first_created_by_username?: string;
+  first_created_by_full_name?: string;
+  creator_usernames: string;
 }
 
 // Annotations API client

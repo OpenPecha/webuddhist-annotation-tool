@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { toast } from "sonner";
 
-import type { AdminManualUserCreate, UserRole } from "@/api/types";
+import type { AdminManualUserCreate, UserResponse, UserRole } from "@/api/types";
 import {
   useSearchUsers,
   useToggleUserStatus,
@@ -14,6 +14,22 @@ import type { RoleFilter, StatusFilter } from "./constants";
 import { filterStaffUsers } from "./utils";
 
 const SEARCH_DEBOUNCE_MS = 300;
+
+function applyListFilters(
+  users: UserResponse[],
+  selectedRole: RoleFilter,
+  selectedStatus: StatusFilter
+): UserResponse[] {
+  let filtered = users;
+  if (selectedRole !== "all") {
+    filtered = filtered.filter((user) => user.role === selectedRole);
+  }
+  if (selectedStatus !== "all") {
+    const wantActive = selectedStatus === "active";
+    filtered = filtered.filter((user) => user.is_active === wantActive);
+  }
+  return filtered;
+}
 
 function getErrorMessage(error: unknown, fallback: string): string {
   return error instanceof Error ? error.message : fallback;
@@ -56,8 +72,17 @@ export function useUserManagement() {
     const raw = isSearchActive
       ? (searchQueryResult.data ?? [])
       : (usersQuery.data ?? []);
-    return filterStaffUsers(raw);
-  }, [isSearchActive, searchQueryResult.data, usersQuery.data]);
+    const list = isSearchActive ? raw : filterStaffUsers(raw);
+    return isSearchActive
+      ? applyListFilters(list, selectedRole, selectedStatus)
+      : list;
+  }, [
+    isSearchActive,
+    searchQueryResult.data,
+    usersQuery.data,
+    selectedRole,
+    selectedStatus,
+  ]);
 
   const isListLoading = isSearchActive
     ? searchQueryResult.isLoading
